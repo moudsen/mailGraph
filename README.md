@@ -124,6 +124,16 @@ Values available:
 {{ LOG_PLAIN }} - script log in PLAIN text format`
 
 # Troubleshooting
+In general if something goes wrong (no output), use the following sequence to identify where the error has occured (and raise an issue in this repository so I can take a look at it):
+- Goto Zabbix => Reports => Action Log and search for events with Status "Failed"
+- Note the itemId, triggerId and eventId from this event for testing the Media Type manually
+- If the popup message says "Syntax Error" something went wrong with the processing during the script. In this case you have to investigate a bit more what is happening.
+
+The easiest way to test what is happening is to now goto Administration => Media types and hit the "Test" at the right hand side for MailGraph.
+- Replace relevant macros with information (eventId, triggerId, itemId, recipient, baseUrl and URL) and hit "Test"
+- The last line in the result will tell you what the problem is (most likely an access or connectivity issue)
+- Fix accordingly and retry
+
 To facilitate troubleshooting, you can (at code level):
 - switch on $cDebugMail to receive processing logs as attachment of an e-mail message
 - store logs in the /log directory when $cDebug is switched on
@@ -132,3 +142,5 @@ In case of an issue that happens before an e-mail is sent, you can also perform 
 - php mailGraph.php test
 
 Note that you have to set the configuration items starting with "cli" in config.json with actual values from a previous message to make this work!
+
+Last resort is to raise an issue in this repository and I will try to assist as soon as possible to fix it.
