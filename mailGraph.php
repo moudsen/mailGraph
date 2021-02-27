@@ -9,7 +9,8 @@
     //
     // ------------------------------------------------------------------------------------------------------
     // 1.00 2021/02/26 - Mark Oudsen - MVP version, ready for distribution
-    // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item
+    // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item // bug fixes
+    // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -40,17 +41,19 @@
     $maskDateTime = 'Y-m-d H:i:s';
 
     // DEBUG SETTINGS
+    // -- Should be FALSE for production level use
 
-    $cDebug = FALSE;         // Comprehensive debug logging including log storage
-    $cDebugMail = FALSE;     // Include log in the mail message? (attachments)
+    $cDebug = TRUE;          // Comprehensive debug logging including log storage
+    $cDebugMail = TRUE;      // Include log in the mail message? (attachments)
     $showLog = FALSE;        // Display the log - !! switch to TRUE when performing CLI debugging only !!!
 
     // INCLUDE REQUIRED LIBRARIES (Composer)
+    // (configure at same location as the script is running or load in your own central library)
     // -- swiftmailer/swiftmailer       https://swiftmailer.symfony.com/docs/introduction.html
     // -- twig/twig                     https://twig.symfony.com/doc/3.x/templates.html
 
-    // [CONFIGURE]
-    include('/path_to_my_libs/vendor/autoload.php');
+    // [CONFIGURE] Change only required if you decide to use a local central library, otherwise leave as is
+    include(getcwd().'/vendor/autoload.php');
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -201,6 +204,32 @@
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Read configuration file
+
+    function readConfig($fileName)
+    {
+        global $cCRLF;
+
+        if (!file_exists($fileName))
+        {
+            echo 'Config file not found. ('.$fileName.')'.$cCRLF;
+            die;
+        }
+
+        $content = file_get_contents($fileName);
+        $data = json_decode($content,TRUE);
+
+        if ($data==NULL)
+        {
+            echo 'Invalid JSON format in config file?! ('.$fileName.')'.$cCRLF;
+            die;
+        }
+
+        return($data);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // API request ID counter - for best practice / debug purposes only
 
     $requestCounter = 0;
@@ -256,27 +285,30 @@
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // [CONFIGURE] Change only when you want to place your config file somewhere else ...
+    $config = readConfig(getcwd().'/config/config.json');
+
+    // Read POST data
     $problemJSON = file_get_contents('php://input');
     $problemData = json_decode($problemJSON,TRUE);
 
+    // Facilitate CLI based testing
     if (isset($argc))
     {
-        // [CONFIGURE] note: required only for debugging purpose, otherwise just leave as is
-
         if (($argc>1) && ($argv[1]=='test'))
         {
-            // Insert the correct ids taken from an e-mail to provide debug capability via CLI
+            _log('# Invoked from CLI');
 
-            $problemData['itemId'] = 0;
-            $problemData['triggerId'] = 0;
-            $problemData['eventId'] = 0;
-            $problemData['eventValue'] = 0;
-            $problemData['recipient'] = '';
-            $problemData['baseURL'] = '';
-            $problemData['duration'] = 10;
+            // Assumes that config.json file has the correct information
+            $problemData['itemId'] = $config['cli_itemId'];
+            $problemData['triggerId'] = $config['cli_triggerId'];
+            $problemData['eventId'] = $config['cli_eventId'];
+            $problemData['eventValue'] = $config['cli_eventValue'];
+            $problemData['recipient'] = $config['cli_recipient'];
+            $problemData['baseURL'] = $config['cli_baseURL'];
+            $problemData['duration'] = $config['cli_duration'];
 
             // Switch on CLI log display
-
             $showLog = TRUE;
         }
     }
@@ -317,35 +349,36 @@
     _log('# Data passed from Zabbix'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- CONFIGURATION ---
-    // [CONFIGURE]
 
-    $z_url = '';                           // Script URL location (for relative paths to images, templates, log, tmp)
-    $z_path = '';                          // Absolute base path on the filesystem for this url
-    $z_url_image = $z_url.'images/';       // Images URL (included in plain message text)
+    // Script related settings
+    $z_url = $config['script_baseurl'];             // Script URL location (for relative paths to images, templates, log, tmp)
+    $z_url_image = $z_url.'images/';                // Images URL (included in plain message text)
 
     // Absolute path where to store the generated images - note: script does not take care of clearing out old images!
+    $z_path = getcwd().'/';                         // Absolute base path on the filesystem for this url
     $z_images_path = $z_path.'/images/';
     $z_template_path = $z_path.'/templates/';
     $z_tmp_cookies = $z_path.'//tmp/';
     $z_log_path = $z_path.'/log/';
 
     // Zabbix user (requires Super Admin access rights to access image generator script)
-    $z_user = 'graphreader';
-    $z_pass = 'givemeastrongpassword';
+    $z_user = $config['zabbix_user'];
+    $z_pass = $config['zabbix_user_pwd'];
 
     // Zabbix API user (requires Super Admin access rights)
     // TODO: Check if information retreival can be done with less rigths
-    $z_api_user = 'zabbixapi';
-    $z_api_pass = 'givemeastrongpassword';
+    $z_api_user = $config['zabbix_api_user'];
+    $z_api_pass = $config['zabbix_api_pwd'];
 
     // Mail sender
-    $mailFrom = array('myemailname.noreply@mydomain.com'=>'Zabbix Mailgraph');
+    $mailFrom = array($config['mail_from']=>'Zabbix Mailgraph');
 
     // Derived variables - do not change!
     $z_server = $p_URL;                             // Zabbix server URL from config
     $z_url_api = $z_server  ."api_jsonrpc.php";     // Zabbix API URL
 
     // Check accessibility of paths and files
+    //TODO: Check write access?
 
     if (!file_exists($z_images_path))
     {
@@ -355,25 +388,25 @@
 
     if (!file_exists($z_tmp_cookies))
     {
-        echo 'Image path inaccessible?'.$cCRLF;
+        echo 'Cookies temporary path inaccessible?'.$cCRLF;
         die;
     }
 
     if (!file_exists($z_log_path))
     {
-        echo 'Image path inaccessible?'.$cCRLF;
+        echo 'Log path inaccessible?'.$cCRLF;
         die;
     }
 
     if (!file_exists($z_template_path.'html.template'))
     {
-        echo 'INIT: HTML template missing?'.$cCRLF;
+        echo 'HTML template missing?'.$cCRLF;
         die;
     }
 
     if (!file_exists($z_template_path.'plain.template'))
     {
-        echo 'INIT: PLAIN template missing?'.$cCRLF;
+        echo 'PLAIN template missing?'.$cCRLF;
         die;
     }
 
@@ -400,7 +433,7 @@
     $token = '';
     if (isset($result['result'])) { $token = $result['result']; }
 
-    if ($token=='') { echo 'Error logging in to Zabbix?'; die; }
+    if ($token=='') { echo 'Error logging in to Zabbix? ('.$z_url_api.')'; die; }
 
     _log('> Token = '.$token);
 
@@ -484,9 +517,9 @@
     // Look for graphs across all functions inside the item
     $itemIds = array();
 
-    foreach($thisItem['result'][0]['functions'] as $aFunction)
+    foreach($thisTrigger['result'][0]['functions'] as $aFunction)
     {
-        $itemIds[] = $aFunction['itremid'];
+        $itemIds[] = $aFunction['itemid'];
     }
 
     $request = array('jsonrpc'=>'2.0',
