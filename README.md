@@ -1,7 +1,7 @@
 # mailGraph
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
-[![](images/Example mail message.png?raw=true)](images/Example mail message.png)
+[![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
 
 # WORK IN PROGRESS
 Although still under development (consider the current release "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
