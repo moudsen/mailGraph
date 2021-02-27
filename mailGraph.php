@@ -337,7 +337,7 @@
     $p_eventValue = intval($problemData['eventValue']);
 
     if (!isset($problemData['duration'])) { echo "Missing DURATION?\n"; die; }
-    $p_duration = intval($problemData['duration']);
+    $p_duration = $problemData['duration'];
 
     if (!isset($problemData['baseURL'])) { echo "Missing URL?\n"; die; }
     $p_URL = $problemData['baseURL'];
@@ -652,7 +652,7 @@
     $mailData['HOST_URL'] = $z_server.'/zabbix/hosts.php?form=update&hostid='.$mailData['HOST_ID'];
     $mailData['EVENTDETAILS_URL'] = $z_server.'/tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'];
 
-    $mailData['EVENT_DURATION'] = getNiceDuration($p_duration);
+    $mailData['EVENT_DURATION'] = $p_duration;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Compose & Send Message ///////////////////////////////////////////////////////////////////////////////
