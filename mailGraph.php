@@ -125,6 +125,7 @@
         global $z_images_path;
         global $z_url_api;
         global $cVersion;
+        global $cCRLF;
 
         // Unique names
         $thisTime = time();
@@ -161,11 +162,18 @@
         curl_setopt($ch, CURLOPT_COOKIEFILE, $filename_cookie);
 
         // Login to Zabbix
-        curl_exec($ch);
+        $login = curl_exec($ch);
+
+        if ($login!='')
+        {
+            echo 'Error logging in to Zabbix!'.$cCRLF;
+            die;
+        }
 
         // Get the graph
         curl_setopt($ch, CURLOPT_URL, $z_url_fetch);
         $output = curl_exec($ch);
+
         curl_close($ch);
 
         // Delete cookie
@@ -642,7 +650,7 @@
     $mailData['TRIGGER_URL'] = $z_server.'/triggers.php?form=update&triggerid='.$mailData['TRIGGER_ID'];
     $mailData['ITEM_URL'] = $z_server.'/items.php?form=update&hostid='.$mailData['HOST_ID'].'&itemid='.$mailData['ITEM_ID'];
     $mailData['HOST_URL'] = $z_server.'/zabbix/hosts.php?form=update&hostid='.$mailData['HOST_ID'];
-    $mailData['EVENTDETAILS_URL'] = $z_server.'/tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'].'"';
+    $mailData['EVENTDETAILS_URL'] = $z_server.'/tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'];
 
     $mailData['EVENT_DURATION'] = getNiceDuration($p_duration);
 
@@ -718,7 +726,7 @@
 
     // Return TAG information
 
-    $response = array('messageId'=>$messageId);
+    $response = array('messageId.mailGraph'=>$messageId);
     echo json_encode($response).$cCRLF;
 
     // Store log?
