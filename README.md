@@ -2,7 +2,7 @@
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 # WORK IN PROGRESS
-Getting the code ready for further distribution.
+Although still under development (consider the current release "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
 
 # Installation pre-requisites
 The suggested installation path of this script is on the same host where Zabbix lives but outside the actual Zabbix directory, although it is possible to run the script entirely somewhere else (the code is webhook based, picking up information from Zabbix is via the front-end login and API).
