@@ -63,7 +63,7 @@ I've picked TWIG as the template processor, where the following macros are avail
 
 Values available:
 
-`{{ baseURL }} - base url of the Zabbix system (use for references to API and login)
+{{ baseURL }} - base url of the Zabbix system (use for references to API and login)
 
 {{ TRIGGER_ID }} - id of the applicable trigger
 
@@ -121,7 +121,7 @@ Values available:
 
 {{ LOG_HTML }} - script log in HTML format
 
-{{ LOG_PLAIN }} - script log in PLAIN text format`
+{{ LOG_PLAIN }} - script log in PLAIN text format
 
 # Troubleshooting
 In general if something goes wrong (no output), use the following sequence to identify where the error has occured (and raise an issue in this repository so I can take a look at it):
