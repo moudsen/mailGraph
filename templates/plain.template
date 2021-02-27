@@ -1,0 +1,29 @@
+EVENT INFORMATION #{{ EVENT_ID }}
+
+Severity:    {{ EVENT_SEVERITY }}
+Description: {{ EVENT_NAME }}
+
+{% if GRAPH_CID|length > 0 %}
+GRAPH #{{ GRAPH_ID }}
+{{ GRAPH_URL }}
+This graph will remain available for approx. the next 2 weeks only; use HTML reader after this period to view the graph.
+{% endif %}
+
+TRIGGER #{{ TRIGGER_ID }}
+
+Operational data: {{ EVENT_OPDATA }}
+Status:           {{ EVENT_STATUS }}
+Description:      {{ TRIGGER_DESCRIPTION }}
+
+ITEM #{{ ITEM_ID }}
+
+Name:  {{ ITEM_NAME }}
+Key:   {{ ITEM_KEY }}
+Value: {{ ITEM_LASTVALUE }}
+
+HOST
+
+Name: {{ HOST_NAME }}
+
+EVENT DETAILS
+{{ baseURL }}/tr_events.php?triggerid={TRIGGER_ID}&eventid={EVENT_ID}

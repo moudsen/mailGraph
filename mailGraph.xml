@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>5.0</version>
+    <date>2021-02-27T12:14:57Z</date>
+    <media_types>
+        <media_type>
+            <name>MailGraph</name>
+            <type>WEBHOOK</type>
+            <parameters>
+                <parameter>
+                    <name>baseURL</name>
+                    <value>https://zbx.puzzl.nl/zabbix</value>
+                </parameter>
+                <parameter>
+                    <name>duration</name>
+                    <value>{EVENT.DURATION}</value>
+                </parameter>
+                <parameter>
+                    <name>eventId</name>
+                    <value>{EVENT.ID}</value>
+                </parameter>
+                <parameter>
+                    <name>eventValue</name>
+                    <value>{EVENT.VALUE}</value>
+                </parameter>
+                <parameter>
+                    <name>graphHeight</name>
+                    <value>120</value>
+                </parameter>
+                <parameter>
+                    <name>graphWidth</name>
+                    <value>300</value>
+                </parameter>
+                <parameter>
+                    <name>HTTPProxy</name>
+                    <value/>
+                </parameter>
+                <parameter>
+                    <name>itemId</name>
+                    <value>{ITEM.ID}</value>
+                </parameter>
+                <parameter>
+                    <name>recipient</name>
+                    <value>{ALERT.SENDTO}</value>
+                </parameter>
+                <parameter>
+                    <name>showLegend</name>
+                    <value>0</value>
+                </parameter>
+                <parameter>
+                    <name>subject</name>
+                    <value>{{ EVENT_SEVERITY }} --- {{ EVENT_NAME }}</value>
+                </parameter>
+                <parameter>
+                    <name>triggerId</name>
+                    <value>{TRIGGER.ID}</value>
+                </parameter>
+                <parameter>
+                    <name>URL</name>
+                    <value>https://zbx.puzzl.nl/mailGraph.php</value>
+                </parameter>
+            </parameters>
+            <script>try {
+  // Pickup parameters
+  params = JSON.parse(value),
+           req = new CurlHttpRequest(),
+           fields = {},
+           resp = '',
+           result = { tags: {} };
+
+  // Set HTTP proxy if required
+  if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') { req.setProxy(params.HTTPProxy); }
+
+  // Declare output type
+  req.AddHeader('Content-Type: application/json');
+
+  // Must have fields
+  fields.itemId = params.itemId;
+  fields.triggerId = params.triggerId;
+  fields.eventId = params.eventId;
+  fields.eventValue = params.eventValue;
+  fields.recipient = params.recipient;
+  fields.baseURL = params.baseURL;
+  fields.duration = params.duration;
+
+  // Optional fields
+  if (typeof params.graphWidth === 'string') { fields.graphWidth = params.graphWidth; }
+  if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }
+  if (typeof params.subject === 'string') { fields.subject = params.subject; }
+  if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }
+
+  // Post information to the processing script
+  Zabbix.Log(4, '[MailGraph Webhook] Sending request: ' + params.URL + '?' + JSON.stringify(fields));
+  var resp = req.Post(params.URL,JSON.stringify(fields));
+  Zabbix.Log(4, '[Mailgraph Webhook] Receiving response:' + resp);
+
+  // If there was an error, report it
+  if (req.Status() != 200) { throw JSON.parse(resp).errors[0]; }
+
+  // We expect the message id back from the processing script
+  resp = JSON.parse(resp);
+  result.tags.__message_id = resp.messageId;
+
+  // Pass the result back to Zabbix
+  return JSON.stringify(result);
+}
+catch (error)
+{
+  // In case something went wrong in the processing, pass the error back to Zabbix
+  Zabbix.Log(127, 'MailGraph notification failed : '+error);
+  throw 'MailGraph notification failed : '+error;
+}</script>
+            <process_tags>YES</process_tags>
+            <description>The &quot;URL&quot; must point to the location of the processing script. If a proxy is required, define &quot;HTTPProxy&quot; for the proxy address.
+
+Customization:
+- &quot;graphWidth&quot; and &quot;graphWidth&quot; can be defined for the image size
+- &quot;showLegend&quot; can be defined to show or hide the legend of the graph
+- &quot;subject&quot; can be defined for a customized subject for the mail message
+
+The html.template and plain.template files can be adjusted (TWIG format).
+
+Values available:
+{{ baseURL }} - base url of the Zabbix system (use for references to API and login)
+{{ TRIGGER_ID }} - id of the applicable trigger
+{{ TRIGGER_DESCRIPTION }} - raw trigger description (note: macros are not parsed!)
+{{ TRIGGER_COMMENTS }} - comments of the trigger
+{{ TRIGGER_URL }} - url of the trigger form
+{{ ITEM_ID }} - id of the associated item to the trigger
+{{ ITEM_KEY }} - key of the item
+{{ ITEM_NAME }} - item name
+{{ ITEM_DESCRIPTION }} - description of the item
+{{ ITEM_LASTVALUE }} - last value of the item
+{{ ITEM_PREVIOUSVALUE }} - the value of the before LASTVALUE
+{{ ITEM_URL }} - url of the item form
+{{ HOST_ID }} - id of the associated host to the item
+{{ HOST_NAME }} - name of the host
+{{ HOST_ERROR }} - last error state of the applicable host
+{{ HOST_DESCRIPTION }} - description of the host
+{{ HOST_URL }} - url of the host form
+{{ EVENT_ID }} - id of the associated event
+{{ EVENT_NAME }} - name of the event (note: macros are parsed!)
+{{ EVENT_OPDATA }} - associated operational data of the vent
+{{ EVENT_VALUE }} - event state (0=Recovered, 1=Triggered/Active)
+{{ EVENT_SEVERITY }} - severity of the event
+{{ EVENT_STATUS }} - status of the event
+{{ EVENT_URL }} - url of the event details
+{{ GRAPH_ID }} - id of the (first) associated graph that contains the item
+{{ GRAPH_NAME }} - name of this graph
+{{ GRAPH_URL }} - URL to this graph (assuming script produces to an accessible location)
+{{ GRAPH_CID }} - IMG embed string (&lt;img src=&quot;{{ GRAPH_CID }}&quot; /&gt;)
+{{ LOG_HTML }} - script log in HTML format
+{{ LOG_PLAIN }} - script log in PLAIN text format</description>
+            <message_templates>
+                <message_template>
+                    <event_source>TRIGGERS</event_source>
+                    <operation_mode>PROBLEM</operation_mode>
+                    <subject>Problem: {EVENT.NAME}</subject>
+                    <message>Problem started at {EVENT.TIME} on {EVENT.DATE}
+Problem name: {EVENT.NAME}
+Host: {HOST.NAME}
+Severity: {EVENT.SEVERITY}
+Operational data: {EVENT.OPDATA}
+Original problem ID: {EVENT.ID}
+{TRIGGER.URL}</message>
+                </message_template>
+                <message_template>
+                    <event_source>TRIGGERS</event_source>
+                    <operation_mode>RECOVERY</operation_mode>
+                    <subject>Resolved in {EVENT.DURATION}: {EVENT.NAME}</subject>
+                    <message>Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+Problem name: {EVENT.NAME}
+Problem duration: {EVENT.DURATION}
+Host: {HOST.NAME}
+Severity: {EVENT.SEVERITY}
+Original problem ID: {EVENT.ID}
+{TRIGGER.URL}</message>
+                </message_template>
+                <message_template>
+                    <event_source>TRIGGERS</event_source>
+                    <operation_mode>UPDATE</operation_mode>
+                    <subject>Updated problem in {EVENT.AGE}: {EVENT.NAME}</subject>
+                    <message>{USER.FULLNAME} {EVENT.UPDATE.ACTION} problem at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.
+{EVENT.UPDATE.MESSAGE}
+
+Current problem status is {EVENT.STATUS}, age is {EVENT.AGE}, acknowledged: {EVENT.ACK.STATUS}.</message>
+                </message_template>
+                <message_template>
+                    <event_source>DISCOVERY</event_source>
+                    <operation_mode>PROBLEM</operation_mode>
+                    <subject>Discovery: {DISCOVERY.DEVICE.STATUS} {DISCOVERY.DEVICE.IPADDRESS}</subject>
+                    <message>Discovery rule: {DISCOVERY.RULE.NAME}
+
+Device IP: {DISCOVERY.DEVICE.IPADDRESS}
+Device DNS: {DISCOVERY.DEVICE.DNS}
+Device status: {DISCOVERY.DEVICE.STATUS}
+Device uptime: {DISCOVERY.DEVICE.UPTIME}
+
+Device service name: {DISCOVERY.SERVICE.NAME}
+Device service port: {DISCOVERY.SERVICE.PORT}
+Device service status: {DISCOVERY.SERVICE.STATUS}
+Device service uptime: {DISCOVERY.SERVICE.UPTIME}</message>
+                </message_template>
+                <message_template>
+                    <event_source>AUTOREGISTRATION</event_source>
+                    <operation_mode>PROBLEM</operation_mode>
+                    <subject>Autoregistration: {HOST.HOST}</subject>
+                    <message>Host name: {HOST.HOST}
+Host IP: {HOST.IP}
+Agent port: {HOST.PORT}</message>
+                </message_template>
+            </message_templates>
+        </media_type>
+    </media_types>
+</zabbix_export>

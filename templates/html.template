@@ -1,0 +1,74 @@
+<html lang="en"><head><meta http-equiv=Content-Type content="text/html; charset=UTF-8">
+<style>
+	.Resolved {
+    background-color:#86cc89;
+    border:1px solid #57bd5b;
+	font-family:Tahoma,Geneva,Arial,sans-serif;font-size:14px;
+	}
+	.Information {
+    background-color:#7499ff;
+    border:1px solid #4673f0;
+	font-family:Tahoma,Geneva,Arial,sans-serif;font-size:14px;
+	}
+	.Warning {
+    background-color:#FFC859;
+    border:1px solid #E69F10;
+	font-family:Tahoma,Geneva,Arial,sans-serif;font-size:14px;
+	}
+	.Average {
+    background-color:#FFA059;
+    border:1px solid #e66e15;
+	font-family:Tahoma,Geneva,Arial,sans-serif;font-size:14px;
+	}
+	.High {
+    background-color:#E97659;
+    border:1px solid #E45959;
+	font-family:Tahoma,Geneva,Arial,sans-serif;font-size:14px;
+	}
+	.Disaster {
+    background-color:#E45959;
+    border:1px solid #DE1E09;
+	font-family:Tahoma,Geneva,Arial,sans-serif;font-size:14px;
+	}
+</style>
+</head>
+<body>
+<table style="margin: 10px;border-spacing:0 15px;border-collapse: separate;">
+	<tr>
+		<td class="{{ EVENT_SEVERITY }}" style="border-radius:10px;padding: 10px 36px 10px 36px; ">
+			<table class="{{ EVENT_SEVERITY }}" style="border:0; text-align:left;" cellpadding="0" cellspacing="0">
+                <tr><td>
+				<p><b>EVENT INFORMATION</b></p>
+                    Description: <b>{{ EVENT_NAME }}</b><br/>
+                    Host: <b>{{ HOST_NAME }}</b>
+{% if HOST_ERROR|length > 0 %}
+ ({{ HOST_ERROR }})
+{% endif %}
+                    <br/>
+                    Operational data: <b>{{ EVENT_OPDATA }}</b><br/>
+                    Status: <b>{{ EVENT_STATUS }}</b><br/>
+                    Severity: <b>{{ EVENT_SEVERITY }}</b><br/>
+{% if EVENT_SEVERITY == "Resolved" %}
+                    Duration: <b>{{ EVENT_DURATION }}</b><br/>
+{% endif %}
+                    Item: <b>{{ ITEM_NAME }}</b> ({{ ITEM_KEY }})<br/>
+                    Previous/Last: {{ ITEM_PREVIOUSVALUE }} ==&gt; {{ ITEM_LASTVALUE }}
+                <p><a href="{{ EVENT_URL }}">Event Details</a><br/></p>
+                </td></tr>
+			</table>
+		</td>
+	</tr>
+{% if GRAPH_CID|length > 0 %}
+    <tr>
+        <td align="center"><img src="{{ GRAPH_CID }}" /></td>
+    </tr>
+{% endif %}
+</table>
+    <p style="font-size:10px">
+        Event ID: <a href="{{ EVENT_URL }}">{{ EVENT_ID }}</a> //
+        Trigger ID: <a href="{{ TRIGGER_URL }}">{{ TRIGGER_ID }}</a> //
+        Item ID: <a href="{{ ITEM_URL }}">{{ ITEM_ID }}</a> //
+        Host ID: <a href="{{ HOST_URL }}">{{ HOST_ID }}</a>
+    </p>
+</body>
+</html>
