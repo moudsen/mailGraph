@@ -51,9 +51,9 @@
 {% if EVENT_SEVERITY == "Resolved" %}
                     Duration: <b>{{ EVENT_DURATION }}</b><br/>
 {% endif %}
-                    Item: <b>{{ ITEM_NAME }}</b> ({{ ITEM_KEY }})<br/>
+                    Item: <b>{{ ITEM_NAME }}</b><br/>
                     Previous/Last: {{ ITEM_PREVIOUSVALUE }} ==&gt; {{ ITEM_LASTVALUE }}
-                <p><a href="{{ EVENT_URL }}">Event Details</a><br/></p>
+                <p><a href="{{ EVENTDETAILS_URL }}">Event Details</a><br/></p>
                 </td></tr>
 			</table>
 		</td>
@@ -65,7 +65,7 @@
 {% endif %}
 </table>
     <p style="font-size:10px">
-        Event ID: <a href="{{ EVENT_URL }}">{{ EVENT_ID }}</a> //
+        Event ID: <a href="{{ EVENTDETAILS_URL }}">{{ EVENT_ID }}</a> //
         Trigger ID: <a href="{{ TRIGGER_URL }}">{{ TRIGGER_ID }}</a> //
         Item ID: <a href="{{ ITEM_URL }}">{{ ITEM_ID }}</a> //
         Host ID: <a href="{{ HOST_URL }}">{{ HOST_ID }}</a>

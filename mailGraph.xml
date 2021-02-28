@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2021-02-27T16:34:16Z</date>
+    <date>2021-02-28T20:27:03Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
@@ -9,7 +9,7 @@
             <parameters>
                 <parameter>
                     <name>baseURL</name>
-                    <value>https://zbx.puzzl.nl/zabbix/</value>
+                    <value>https://domain.com/zabbix/</value>
                 </parameter>
                 <parameter>
                     <name>duration</name>
@@ -49,7 +49,7 @@
                 </parameter>
                 <parameter>
                     <name>subject</name>
-                    <value>{{ EVENT_SEVERITY }} --- {{ EVENT_NAME }}</value>
+                    <value>{{ HOST_NAME }}: ({{ EVENT_SEVERITY }}) {{ EVENT_NAME }}</value>
                 </parameter>
                 <parameter>
                     <name>triggerId</name>
@@ -57,7 +57,7 @@
                 </parameter>
                 <parameter>
                     <name>URL</name>
-                    <value>https://zbx.puzzl.nl/mailGraph.php</value>
+                    <value>https://domain.com/mailGraph.php</value>
                 </parameter>
             </parameters>
             <script>try {&#13;

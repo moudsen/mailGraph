@@ -18,12 +18,12 @@ Description:      {{ TRIGGER_DESCRIPTION }}
 ITEM #{{ ITEM_ID }}
 
 Name:  {{ ITEM_NAME }}
-Key:   {{ ITEM_KEY }}
 Value: {{ ITEM_LASTVALUE }}
+Previous: {{ ITEM_PREVIOUSVALUE }}
 
 HOST
 
 Name: {{ HOST_NAME }}
 
 EVENT DETAILS
-{{ baseURL }}/tr_events.php?triggerid={TRIGGER_ID}&eventid={EVENT_ID}
+{{ EVENTDETAILS_URL }}

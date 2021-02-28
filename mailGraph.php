@@ -11,6 +11,7 @@
     // 1.00 2021/02/26 - Mark Oudsen - MVP version, ready for distribution
     // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item // bug fixes
     // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
+    // 1.11 2021/02/28 - Mark Oudsen - Bug fixes
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -36,7 +37,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.01';
+    $cVersion = 'v1.11';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -315,6 +316,7 @@
             $problemData['recipient'] = $config['cli_recipient'];
             $problemData['baseURL'] = $config['cli_baseURL'];
             $problemData['duration'] = $config['cli_duration'];
+            $problemData['subject'] = $config['cli_subject'];
 
             // Switch on CLI log display
             $showLog = TRUE;
@@ -337,13 +339,13 @@
     $p_eventValue = intval($problemData['eventValue']);
 
     if (!isset($problemData['duration'])) { echo "Missing DURATION?\n"; die; }
-    $p_duration = $problemData['duration'];
+    $p_duration = intval($problemData['duration']);
 
     if (!isset($problemData['baseURL'])) { echo "Missing URL?\n"; die; }
     $p_URL = $problemData['baseURL'];
 
     $p_subject = '{{ EVENT_SEVERITY }}: {{ EVENT_NAME }}';
-    if ((isset($problemData['subject'])) && ($problemData['subject']!='')) { $p_subject = $problemData['subject']; }
+    if (isset($problemData['subject'])) { $p_subject = $problemData['subject']; }
 
     $p_graphWidth = 450;
     if (isset($problemData['graphWidth'])) { $p_graphWidth = intval($problemData['graphWidth']); }
@@ -423,7 +425,9 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     $mailData = array();
-    $mailData['baseURL'] = $p_URL;
+
+    $mailData['BASE_URL'] = $p_URL;
+    $mailData['SUBJECT'] = $p_subject;
 
     // --- LOGIN ---
 
@@ -496,7 +500,7 @@
 
     // --- GET HOST INFO ---
 
-    _log('# Retrieve HOST information ');
+    _log('# Retrieve HOST information');
 
     $hostId = $thisItem['result'][0]['hostid'];
 
@@ -514,6 +518,18 @@
     $mailData['HOST_NAME'] = $thisHost['result'][0]['name'];
     $mailData['HOST_ERROR'] = $thisHost['result'][0]['error'];
     $mailData['HOST_DESCRIPTION'] = $thisHost['result'][0]['description'];
+
+    _log('# Retreive HOST macro information');
+
+    $request = array('jsonrpc'=>'2.0',
+                     'method'=>'usermacro.get',
+                     'params'=>array('hostids'=>$hostId,
+                                     'output'=>'extend'),
+                     'auth'=>$token,
+                     'id'=>nextRequestID());
+
+    $thisMacros = postJSON($z_url_api,$request);
+    _log('> Host macro data'.$cCRLF.json_encode($thisMacros,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- GET GRAPHS ASSOCIATED WITH THIS ITEM ---
 
@@ -685,7 +701,7 @@
     $loader = new \Twig\Loader\ArrayLoader([
         'html' => file_get_contents($z_template_path.'html.template'),
         'plain' => file_get_contents($z_template_path.'plain.template'),
-        'subject' => $p_subject,
+        'subject' => $mailData['SUBJECT'],
     ]);
 
     $twig = new \Twig\Environment($loader);
@@ -703,7 +719,7 @@
 
     // Prepare message
 
-    $message->setSubject($thisEvent['result'][0]['name'])
+    $message->setSubject($mailSubject)
             ->setFrom($mailFrom)
             ->setTo($p_recipient)
             ->setBody($bodyHTML, 'text/html')
@@ -739,6 +755,6 @@
         $content = implode(chr(10),$logging).$cCRLF.$cCRLF.'=== MAILDATA ==='.$cCRLF.$cCRLF.json_encode($mailData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
         $content = str_replace(chr(13),'',$content);
 
-        file_put_contents($z_log_path.'log.'.$p_eventId.'.dump',$content);
+        file_put_contents($z_log_path.'log.'.$p_eventId.'.'.date('YmdHis').'.dump',$content);
     }
 ?>
