@@ -9,7 +9,7 @@
     "cli_subject": "\"{{ HOST_NAME }}\":  ({{ EVENT_SEVERITY }}) {{ EVENT_NAME }}"
     "cli_baseURL": "https:\/\/domain.com\/zabbix\/",
     "zabbix_user": "alogicalusername",
-    "zabbix_pwd": "astrongpassword",
+    "zabbix_user_pwd": "astrongpassword",
     "zabbix_api_user": "alogicalusername",
     "zabbix_api_pwd": "astrongpassword",
     "mail_from": "sender@domain.com"
