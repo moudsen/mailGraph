@@ -6,6 +6,19 @@ Zabbix Media module and scripts for sending e-mail alerts with graphs.
 # WORK IN PROGRESS
 Although still under development (consider the current release "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
 
+**List of item to-do**
+1. Resolve macro information.
+1. Passing dynamic parameters via the Webhook for template/output usage.
+1. Finding "beta testers" to assist me in further enhancing the use cases.
+
+# Zabbix enhancements
+https://support.zabbix.com/browse/ZBXNEXT-6534
+Main ticket asking how to get this Media type onboarded in the Media type section of the manual and the associated Zabbix GitHub directory.
+
+https://support.zabbix.com/browse/ZBXNEXT-6535
+One of the major items that needs to be tackled is to resolve Macros that are in names, descriptions, etc. As this does work for the Trigger and TriggerPrototype I've examined the Zabbix source code and from here I would say it's quite "easy" to add the "expandXXX" flags to other types as well (found many existing functions to perform this).
+I'm adding this to my testlab setup for Item and ItemPrototype and will share the outcome. If it is succesfull I will also arrange for other types (like Host) eventually giving back the additional code lines to Zabbix for incorporation into a release.
+
 # Installation pre-requisites
 The suggested installation path of this script is on the same host where Zabbix lives but outside the actual Zabbix directory, although it is possible to run the script entirely somewhere else (the code is webhook based, picking up information from Zabbix is via the front-end login and API).
 
@@ -19,8 +32,8 @@ The suggested installation path of this script is on the same host where Zabbix 
 - Create the directories "config", "images", "log", "templates" and "tmp" inside this directory
 - Copy .htaccess to the main directory _(if not using Apache make sure your webserver denies access to /config!)_
 - Copy mailGraph.php to the main directory
-- Install SwiftMailer: "composer require swiftmailer/swiftmailer"
-- Install TWIG: "composer require twig/twig"
+- Install SwiftMailer: `composer require swiftmailer/swiftmailer`
+- Install TWIG: `composer require twig/twig`
 - Copy config/config.php to your /config directory
 - Copy config/config.json.template to your /config/ directory and rename to "config.json"
 - Copy templates/html.template and templates/plain.template to your templates directory
