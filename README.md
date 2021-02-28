@@ -4,12 +4,13 @@ Zabbix Media module and scripts for sending e-mail alerts with graphs.
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
 
 # WORK IN PROGRESS
-Although still under development (consider the current release "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
+Although still under development (consider the current releases "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
 
 **List of item to-do**
-1. Resolve macro information.
-1. Passing dynamic parameters via the Webhook for template/output usage.
-1. Finding "beta testers" to assist me in further enhancing the use cases.
+1. Resolve macro information => _DROPPED_: Found out during development and testing this may expose sensitive information over the e-mail hence decided to drop this; clicking the EVENT DETAILS link takes any receiver to the corresponding Zabbix page.
+2. Passing dynamic parameters via the Webhook for template/output usage => WORK IN PROGRESS, release 1.20
+3. Finding "beta testers" to assist me in further enhancing the use cases => awaiting the first users/feedback!
+4. Adding parameters to configure SwitftMailer configuration. Currently mailGraph assumes you have a localhost capable of processing the mail. => WORK IN PROGRESS, release 1.20
 
 # Zabbix enhancements
 https://support.zabbix.com/browse/ZBXNEXT-6534
@@ -22,22 +23,25 @@ I'm adding this to my testlab setup for Item and ItemPrototype and will share th
 # Installation pre-requisites
 The suggested installation path of this script is on the same host where Zabbix lives but outside the actual Zabbix directory, although it is possible to run the script entirely somewhere else (the code is webhook based, picking up information from Zabbix is via the front-end login and API).
 
+I've tested my code with Zabbix 5.0.5 (LTS). Not sure if it can/will run in any versions under 5.
+
 # I'm assuming
-- you are familiar with "composer"
-- you know how to configure a webserver/virtual host
-- that you have CURL and PHP installed
+- You are familiar with "composer"
+- You know how to configure and secure a webserver/virtual host
+- That you have CURL and PHP installed
 
 # Prepare the installation
+- Download or clone this repository
 - Pick a directory within a (virtual) host of your webserver
 - Create the directories "config", "images", "log", "templates" and "tmp" inside this directory
-- Copy .htaccess to the main directory _(if not using Apache make sure your webserver denies access to /config!)_
+- Copy .htaccess to the main directory _(if not using Apache make sure your webserver denies http access to /config!)_
 - Copy mailGraph.php to the main directory
 - Install SwiftMailer: `composer require swiftmailer/swiftmailer`
 - Install TWIG: `composer require twig/twig`
 - Copy config/config.php to your /config directory
-- Copy config/config.json.template to your /config/ directory and rename to "config.json"
+- Copy config/config.json.template to your /config/ directory and rename to "config.json" (we will configure in the next step)
 - Copy templates/html.template and templates/plain.template to your templates directory
-- Copy mailGraph.xml to a location where you can upload the Media Type to Zabbix
+- Copy mailGraph.xml to a location where you can upload the Media Type to Zabbix (we will load into / configure in Zabbix in the next steps)
 
 # Configuration
 - Goto your /config directory
@@ -45,13 +49,13 @@ The suggested installation path of this script is on the same host where Zabbix 
 - List the available configuration options with "php config.php config.json list"
 - Change any option with "php config.php config.json replace 'key_name' 'new_value'" (note the usage of the single quotes from the command-line!)
 
-**"script_baseurl"** should point to the URL of your directory (ie. "https://mydomain.com/mailgraph/"). Note the ending '/'!
+**"script_baseurl"** should point to the URL of your directory where MailGraph is installed (ie. "https://mydomain.com/"). Note the ending '/'!
 
-**"zabbix_user"** must be a Zabbix SuperAdmin user you create to login to Zabbix (this is for grabbing the images via the regular Zabbix routines).
+**"zabbix_user"** and **zabbix_user_pwd** must be a Zabbix SuperAdmin user/password you need to have/create to login to Zabbix (this is for grabbing the images via the regular Zabbix routines).
 
-**"zabbix_user_api"** must also be a Zabbix SuperAdmin user your create to login to the Zabbix API (this is for grabbing the information of the event via the Zabbix API).
+**"zabbix_user_api"** and **zabbix_user_pwd** must also be a Zabbix SuperAdmin user/password you need to have/create to login to the Zabbix API (this is for grabbing the information of the event via the Zabbix API).
 
-**"mail_from"** must be a valid e-mail address which represents the 'from' address in the mails that are sent (ie. "zabbix.mailgraph.noreply@domain.com").
+**"mail_from"** must be a valid e-mail address which represents the 'from' address in the mails that are sent (ie. "zabbix.mailgraph.noreply@domain.com") that is acceptable by your mail server.
 
 # Load the Media Type "MailGraph" into Zabbix
 - Login to your Zabbix instance
