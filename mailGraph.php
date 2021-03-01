@@ -11,7 +11,8 @@
     // 1.00 2021/02/26 - Mark Oudsen - MVP version, ready for distribution
     // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item // bug fixes
     // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
-    // 1.11 2021/02/28 - Mark Oudsen - Bug fixes
+    // 1.11 2021/02/28 - Mark Oudsen - Bugfixes
+    // 1.12 2021/03/01 - Mark Oudsen - Bugfixes - Adding mail server configuration via config.json
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -37,7 +38,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.11';
+    $cVersion = 'v1.12';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -297,6 +298,8 @@
     // [CONFIGURE] Change only when you want to place your config file somewhere else ...
     $config = readConfig(getcwd().'/config/config.json');
 
+    _log('# Configuration taken from config.json'.$cCRLF.json_encode($config,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
     // Read POST data
     $problemJSON = file_get_contents('php://input');
     $problemData = json_decode($problemJSON,TRUE);
@@ -322,6 +325,10 @@
             $showLog = TRUE;
         }
     }
+
+    _log('# Data passed from Zabbix'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+    # --- Process into p_ variables for usage across the script
 
     if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
     $p_itemId = intval($problemData['itemId']);
@@ -356,7 +363,11 @@
     $p_showLegend = 0;
     if (isset($problemData['showLegend'])) { $p_showLegend = intval($problemData['showLegend']); }
 
-    _log('# Data passed from Zabbix'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+    $p_smtp_server = 'localhost';
+    if (isset($config['smtp_server'])) { $p_smtp_server = $config['smtp_server']; }
+
+    $p_smtp_port = 25;
+    if (isset($config['smtp_port'])) { $p_smtp_port = $config['smtp_port']; }
 
     // --- CONFIGURATION ---
 
@@ -676,7 +687,7 @@
 
     _log('# Setting up mailer');
 
-    $transport = (new Swift_SmtpTransport('mail.puzzl.nl', 25));
+    $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port));
     $mailer = new Swift_Mailer($transport);
 
     $message = (new Swift_Message());
