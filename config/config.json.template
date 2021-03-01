@@ -16,5 +16,6 @@
     "smtp_server": "localhost",
     "smtp_port": 25,
     "smtp_transport": "none",
-    "smtp_strict": "yes"
+    "smtp_strict": "yes",
+    "graph_match": "any"
 }

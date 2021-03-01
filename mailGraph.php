@@ -12,9 +12,12 @@
     // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item // bug fixes
     // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
     // 1.11 2021/02/28 - Mark Oudsen - Bugfixes
-    // 1.12 2021/03/01 - Mark Oudsen - Bugfixes - Adding mail server configuration via config.json
+    // 1.12 2021/03/01 - Mark Oudsen - Bugfixes
+    //                                 Adding mail server configuration via config.json
     // 1.13 2021/03/01 - Mark Oudsen - Added smtp options to encrypt none,ssl,tls
     // 1.14 2021/03/01 - Mark Oudsen - Added smtp strict certificates yes|no via config.json
+    // 1.15 2021/03/01 - Mark Oudsen - Revised relevant graph locator; allowing other item graphs if current
+    //                                 item does not have a graph associated
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -37,7 +40,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.14';
+    $cVersion = 'v1.15';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -375,6 +378,9 @@
     $p_smtp_strict = 'yes';
     if ((isset($config['smtp_strict'])) && ($config['smtp_strict']=='no')) { $p_smtp_strict = 'no'; }
 
+    $p_graph_match = 'any';
+    if ((isset($config['graph_match'])) && ($config['graph_match']=='exact')) { $p_graph_match = 'exact'; }
+
     // --- CONFIGURATION ---
 
     // Script related settings
@@ -579,6 +585,7 @@
     _log('# Retreiving associated graph items for the identified graphs');
 
     $matchedGraphs = array();
+    $otherGraphs = array();
 
     foreach($thisGraph['result'] as $aGraph)
     {
@@ -591,7 +598,7 @@
 
         $thisGraphItems[$aGraph['graphid']] = postJSON($z_url_api,$request);
 
-        foreach($thisGraphItems[$aGraph['graphid']]['result'] as $graphItem)
+        foreach($thisGraphItems[$aGraph['graphid']]['result'] as $aKey=>$graphItem)
         {
             if ($graphItem['itemid']==$itemId)
             {
@@ -600,12 +607,14 @@
             }
             else
             {
+                $otherGraphs[] = $aGraph;
                 _log('- Graph item (nomatch)'.$cCRLF.json_encode($aGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
             }
+
         }
     }
 
-    _log('> Graphs found (matching) = '.sizeof($matchedGraphs));
+    _log('> Graphs found (matching/others) = '.sizeof($matchedGraphs).' / '.sizeof($otherGraphs));
 
     // --- READ EVENT INFORMATION ---
 
@@ -648,18 +657,37 @@
     $graphFile = '';
     $graphURL = '';
 
-    if (sizeof($matchedGraphs)>0)
+    if ((sizeof($matchedGraphs)+sizeof($otherGraphs))>0)
     {
         // TODO: if multiple graphs, pick the first one or the one that is TAGGED with a mailGraph tag/value
 
-        _log('# Adding graph #'.$matchedGraphs[0]['graphid']);
-        $graphFile = GraphImageById($matchedGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$p_showLegend);
+        if (sizeof($matchedGraphs)>0)
+        {
+            _log('# Adding MATCHED graph #'.$matchedGraphs[0]['graphid']);
+            $graphFile = GraphImageById($matchedGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$p_showLegend);
 
-        _log('> Filename = '.$graphFile);
+            _log('> Filename = '.$graphFile);
 
-        $mailData['GRAPH_ID'] = $matchedGraphs[0]['graphid'];
-        $mailData['GRAPH_NAME'] = $matchedGraphs[0]['name'];
-        $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
+            $mailData['GRAPH_ID'] = $matchedGraphs[0]['graphid'];
+            $mailData['GRAPH_NAME'] = $matchedGraphs[0]['name'];
+            $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
+            $mailData['GRAPH_MATCH'] = 'Exact';
+        }
+        else
+        {
+            if (($p_graph_match!='exact') && (sizeof($otherGraphs)>0))
+            {
+                _log('# Adding OTHER graph #'.$otherGraphs[0]['graphid']);
+                $graphFile = GraphImageById($otherGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$p_showLegend);
+
+                _log('> Filename = '.$graphFile);
+
+                $mailData['GRAPH_ID'] = $otherGraphs[0]['graphid'];
+                $mailData['GRAPH_NAME'] = $otherGraphs[0]['name'];
+                $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
+                $mailData['GRAPH_MATCH'] = 'Other';
+            }
+        }
     }
 
     // Prepare HTML LOG content
@@ -708,16 +736,16 @@
                     ]);
             }
         }
+        else
+        {
             if ($transport instanceof \Swift_Transport_EsmtpTransport)
             {
                 $transport->setStreamOptions([
                     'ssl' => ['allow_self_signed' => false,
                               'verify_peer' => true,
                               'verify_peer_name' => true]
-                    ]);
+                ]);
             }
-        else
-        {
         }
     }
     else
@@ -803,6 +831,9 @@
         $content = implode(chr(10),$logging).$cCRLF.$cCRLF.'=== MAILDATA ==='.$cCRLF.$cCRLF.json_encode($mailData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
         $content = str_replace(chr(13),'',$content);
 
-        file_put_contents($z_log_path.'log.'.$p_eventId.'.'.date('YmdHis').'.dump',$content);
+        $logName = 'log.'.$p_eventId.'.'.date('YmdHis').'.dump';
+
+        file_put_contents($z_log_path.$logName,$content);
+	_log('= Log stored to '.$z_log_path.$logName);
     }
 ?>
