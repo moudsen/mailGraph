@@ -13,6 +13,7 @@
     // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
     // 1.11 2021/02/28 - Mark Oudsen - Bugfixes
     // 1.12 2021/03/01 - Mark Oudsen - Bugfixes - Adding mail server configuration via config.json
+    // 1.13 2021/03/01 - Mark Oudsen - Added smtp options to encrypt none,ssl,tls
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -369,6 +370,10 @@
     $p_smtp_port = 25;
     if (isset($config['smtp_port'])) { $p_smtp_port = $config['smtp_port']; }
 
+    $p_smtp_transport = 'none';
+    if ((isset($config['smtp_transport'])) && ($config['smtp_transport']=='tls')) { $p_smtp_transport = 'tls'; }
+    if ((isset($config['smtp_transport'])) && ($config['smtp_transport']=='ssl')) { $p_smtp_transport = 'ssl'; }
+
     // --- CONFIGURATION ---
 
     // Script related settings
@@ -687,7 +692,15 @@
 
     _log('# Setting up mailer');
 
-    $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port));
+    if (($p_smtp_transport=='tls') || ($p_smtp_transport=='ssl'))
+    {
+        $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port, $p_smtp_transport));
+    }
+    else
+    {
+        $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port));
+    }
+
     $mailer = new Swift_Mailer($transport);
 
     $message = (new Swift_Message());

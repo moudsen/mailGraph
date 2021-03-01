@@ -14,5 +14,6 @@
     "zabbix_api_pwd": "astrongpassword",
     "mail_from": "sender@domain.com",
     "smtp_server": "localhost",
-    "smtp_port": 25
+    "smtp_port": 25,
+    "smtp_transport": "none"
 }
