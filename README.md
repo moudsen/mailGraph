@@ -77,6 +77,15 @@ You can change the "subject" of the e-mail that is sent (note that the markup ca
 # Actions configuration
 At this point the Media type is ready for configuration under "actions" as per the regular way of Zabbix alert processing. Please refer to the manual how to configure.
 
+# What if there is no graph added to the e-mail?
+There is no immediate relationship between a trigger and a graph. This is why the script uses the following technique to find graphs to are associated to the trigger:
+1. The trigger API call returns a list of "functions". Each functions holds an "item id".
+2. Via the graph API call we can figure out which graphs are associated to the "host id" and to any of the items we've found in the previous step.
+3. Traversing this set of grahps, we are looking for graphs that have the actual "item id" associated. If there is no association found, we can still use any graph as it is still relevant to the trigger, but it will have an indirect relationship.
+4. Most ideally we pick the graph that has the actual "item id" matched. If not, we pick the first grapgh we've managed to find.
+
+In reality this may means that there are items (like simple "interface up/down" configured) that have no graphs defined. In this occasion there is no graph attached to the message. If you wish a graph to appear at this point, just add a graph using that item and next time this graph will show in the message.
+
 # Template adjustments
 I've picked TWIG as the template processor, where the following macros are available for your convenience. Feel free to adjust the html.template and plain.template files as you see fit for your situation!
 
