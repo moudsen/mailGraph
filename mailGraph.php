@@ -14,6 +14,7 @@
     // 1.11 2021/02/28 - Mark Oudsen - Bugfixes
     // 1.12 2021/03/01 - Mark Oudsen - Bugfixes - Adding mail server configuration via config.json
     // 1.13 2021/03/01 - Mark Oudsen - Added smtp options to encrypt none,ssl,tls
+    // 1.14 2021/03/01 - Mark Oudsen - Added smtp strict certificates yes|no via config.json
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -21,9 +22,6 @@
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // !!! NOTE: configure the script before usage !!!
-    // Sections are marked [CONFIGURE] across the script
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +37,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.12';
+    $cVersion = 'v1.14';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -55,7 +53,7 @@
     // -- swiftmailer/swiftmailer       https://swiftmailer.symfony.com/docs/introduction.html
     // -- twig/twig                     https://twig.symfony.com/doc/3.x/templates.html
 
-    // [CONFIGURE] Change only required if you decide to use a local central library, otherwise leave as is
+    // Change only required if you decide to use a local/central library, otherwise leave as is
     include(getcwd().'/vendor/autoload.php');
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -373,6 +371,9 @@
     $p_smtp_transport = 'none';
     if ((isset($config['smtp_transport'])) && ($config['smtp_transport']=='tls')) { $p_smtp_transport = 'tls'; }
     if ((isset($config['smtp_transport'])) && ($config['smtp_transport']=='ssl')) { $p_smtp_transport = 'ssl'; }
+
+    $p_smtp_strict = 'yes';
+    if ((isset($config['smtp_strict'])) && ($config['smtp_strict']=='no')) { $p_smtp_strict = 'no'; }
 
     // --- CONFIGURATION ---
 
@@ -695,6 +696,29 @@
     if (($p_smtp_transport=='tls') || ($p_smtp_transport=='ssl'))
     {
         $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port, $p_smtp_transport));
+
+        if ($p_smtp_strict=='no')
+        {
+            if ($transport instanceof \Swift_Transport_EsmtpTransport)
+            {
+                $transport->setStreamOptions([
+                    'ssl' => ['allow_self_signed' => true,
+                              'verify_peer' => false,
+                              'verify_peer_name' => false]
+                    ]);
+            }
+        }
+            if ($transport instanceof \Swift_Transport_EsmtpTransport)
+            {
+                $transport->setStreamOptions([
+                    'ssl' => ['allow_self_signed' => false,
+                              'verify_peer' => true,
+                              'verify_peer_name' => true]
+                    ]);
+            }
+        else
+        {
+        }
     }
     else
     {

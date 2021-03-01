@@ -15,5 +15,6 @@
     "mail_from": "sender@domain.com",
     "smtp_server": "localhost",
     "smtp_port": 25,
-    "smtp_transport": "none"
+    "smtp_transport": "none",
+    "smtp_strict": "yes"
 }
