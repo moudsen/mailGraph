@@ -18,6 +18,8 @@
     // 1.14 2021/03/01 - Mark Oudsen - Added smtp strict certificates yes|no via config.json
     // 1.15 2021/03/01 - Mark Oudsen - Revised relevant graph locator; allowing other item graphs if current
     //                                 item does not have a graph associated
+    // 1.16 2021/03/02 - Mark Oudsen - Found issue with graph.get not returning graphs to requested item ids
+    //                                 Workaround programmed (fetch host graphs, search for certain itemids)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -40,7 +42,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.15';
+    $cVersion = 'v1.16';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -120,7 +122,7 @@
     // --- Store with unique name
     // --- Pass filename back to caller
 
-    function GraphImageById ($graphid, $width = 400, $height = 100, $showLegend = 0)
+    function GraphImageById ($graphid, $width = 400, $height = 100, $graphType = 0, $showLegend = 0)
     {
         global $z_server;
         global $z_user;
@@ -137,7 +139,8 @@
         // Relative web calls
         $z_url_index   = $z_server ."index.php";
         $z_url_graph   = $z_server ."chart2.php";
-        $z_url_fetch   = $z_url_graph ."?graphid=" .$graphid ."&width=" .$width ."&height=" .$height ."&legend=".$showLegend."&profileIdx=web.charts.filter";
+        $z_url_fetch   = $z_url_graph ."?graphid=" .$graphid ."&width=" .$width ."&height=" .$height .
+                                       "&graphtype=".$graphType."&legend=".$showLegend."&profileIdx=web.charts.filter";
 
         // Prepare POST login
         $z_login_data  = array('name' => $z_user, 'password' => $z_pass, 'enter' => "Sign in");
@@ -353,7 +356,7 @@
     if (!isset($problemData['baseURL'])) { echo "Missing URL?\n"; die; }
     $p_URL = $problemData['baseURL'];
 
-    $p_subject = '{{ EVENT_SEVERITY }}: {{ EVENT_NAME }}';
+    $p_subject = '{{ EVENT_SEVERITY }}: {{ EVENT_NAME|raw }}';
     if (isset($problemData['subject'])) { $p_subject = $problemData['subject']; }
 
     $p_graphWidth = 450;
@@ -554,67 +557,72 @@
     $thisMacros = postJSON($z_url_api,$request);
     _log('> Host macro data'.$cCRLF.json_encode($thisMacros,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
-    // --- GET GRAPHS ASSOCIATED WITH THIS ITEM ---
+    // --- GET GRAPHS ASSOCIATED WITH THIS HOST ---
+    // Note: graph.get where itemids are specified does not seem to work!
 
-    _log('# Retrieve associated graphs to this item');
+    _log('# Retrieve associated graphs to this HOST');
 
     $keyName = $thisItem['result'][0]['key_'];
     $hostId = $thisItem['result'][0]['hostid'];
+
+    $request = array('jsonrpc'=>'2.0',
+                     'method'=>'graph.get',
+                     'params'=>array('hostids'=>$hostId,
+                                     'expandName'=>1,
+                                     'selectGraphItems'=>'extend',
+                                     'output'=>'extend'),
+                     'auth'=>$token,
+                     'id'=>nextRequestID());
+
+    $thisGraphs = postJSON($z_url_api,$request);
+    _log('> Graphs data'.$cCRLF.json_encode($thisGraphs,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+    // --- FIND MATCHING GRAPH ITEMS WITH OUR TRIGGER ITEMS ---
+
+    _log('# Matching retreived graph information with our trigger items');
 
     // Look for graphs across all functions inside the item
     $itemIds = array();
 
     foreach($thisTrigger['result'][0]['functions'] as $aFunction)
     {
-        $itemIds[] = $aFunction['itemid'];
+        $didFind = FALSE;
+
+        foreach($itemIds as $anItem)
+        {
+            if ($anItem==$aFunction['itemid']) { $didFind = TRUE; break; }
+        }
+
+        if (!$didFind) { $itemIds[] = $aFunction['itemid']; }
     }
-
-    $request = array('jsonrpc'=>'2.0',
-                     'method'=>'graph.get',
-                     'params'=>array('itemids'=>implode(',',$itemIds),
-                                     'hostids'=>$hostId,
-                                     'output'=>'extend'),
-                     'auth'=>$token,
-                     'id'=>nextRequestID());
-
-    $thisGraph = postJSON($z_url_api,$request);
-    _log('> Graph data'.$cCRLF.json_encode($thisGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
-
-    // --- FIND ASSOCIATED GRAPH ITEMS ---
-
-    _log('# Retreiving associated graph items for the identified graphs');
 
     $matchedGraphs = array();
     $otherGraphs = array();
 
-    foreach($thisGraph['result'] as $aGraph)
+    foreach($thisGraphs['result'] as $aGraph)
     {
-        $request = array('jsonrpc'=>'2.0',
-                         'method'=>'graphitem.get',
-                         'params'=>array('graphids'=>$aGraph['graphid'],
-                                         'output'=>'extend'),
-                         'auth'=>$token,
-                         'id'=>nextRequestID());
-
-        $thisGraphItems[$aGraph['graphid']] = postJSON($z_url_api,$request);
-
-        foreach($thisGraphItems[$aGraph['graphid']]['result'] as $aKey=>$graphItem)
+        foreach($aGraph['gitems'] as $aGraphItem)
         {
-            if ($graphItem['itemid']==$itemId)
+            foreach($itemIds as $anItemId)
             {
-                $matchedGraphs[] = $aGraph;
-                _log('+ Graph item ### MATCH ###'.$cCRLF.json_encode($aGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+                if ($aGraphItem['itemid']==$anItemId)
+                {
+                    if ($anItemId=$itemId)
+                    {
+                        _log('+ Graph #'.$aGraphItem['graphid'].' full match found (item #'.$aGraphItem['itemid'].')');
+                        $matchedGraphs[] = $aGraph;
+                    }
+                    else
+                    {
+                        $otherGraphs[] = $aGraph;
+                        _log('~ Graph #'.$aGraphItem['graphid'].' partial match found (item #'.$aGraphItem['itemid'].')');
+                    }
+                }
             }
-            else
-            {
-                $otherGraphs[] = $aGraph;
-                _log('- Graph item (nomatch)'.$cCRLF.json_encode($aGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
-            }
-
         }
     }
 
-    _log('> Graphs found (matching/others) = '.sizeof($matchedGraphs).' / '.sizeof($otherGraphs));
+    _log('> Graphs found (matching/partial) = '.sizeof($matchedGraphs).' / '.sizeof($otherGraphs));
 
     // --- READ EVENT INFORMATION ---
 
@@ -664,7 +672,7 @@
         if (sizeof($matchedGraphs)>0)
         {
             _log('# Adding MATCHED graph #'.$matchedGraphs[0]['graphid']);
-            $graphFile = GraphImageById($matchedGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$p_showLegend);
+            $graphFile = GraphImageById($matchedGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$matchedGraphs[0]['graphtype'],$p_showLegend);
 
             _log('> Filename = '.$graphFile);
 
@@ -678,7 +686,7 @@
             if (($p_graph_match!='exact') && (sizeof($otherGraphs)>0))
             {
                 _log('# Adding OTHER graph #'.$otherGraphs[0]['graphid']);
-                $graphFile = GraphImageById($otherGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$p_showLegend);
+                $graphFile = GraphImageById($otherGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$otherGraphs[0]['graphtype'],$p_showLegend);
 
                 _log('> Filename = '.$graphFile);
 
@@ -688,6 +696,8 @@
                 $mailData['GRAPH_MATCH'] = 'Other';
             }
         }
+
+        $mailData['GRAPH_ZABBIXLINK'] = $z_server.'/graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
     }
 
     // Prepare HTML LOG content

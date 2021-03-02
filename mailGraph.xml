@@ -49,7 +49,7 @@
                 </parameter>
                 <parameter>
                     <name>subject</name>
-                    <value>{{ HOST_NAME }}: ({{ EVENT_SEVERITY }}) {{ EVENT_NAME }}</value>
+                    <value>{{ HOST_NAME|raw }}: ({{ EVENT_SEVERITY }}) {{ EVENT_NAME|raw }}</value>
                 </parameter>
                 <parameter>
                     <name>triggerId</name>
@@ -149,6 +149,7 @@ Values available:&#13;
 {{ GRAPH_NAME }} - name of this graph&#13;
 {{ GRAPH_URL }} - URL to this graph (assuming script produces to an accessible location)&#13;
 {{ GRAPH_CID }} - IMG embed string (&lt;img src=&quot;{{ GRAPH_CID }}&quot; /&gt;)&#13;
+{{ GRAPH_ZABBIXLINK }} - URL to the graph item in Zabbix
 {{ LOG_HTML }} - script log in HTML format&#13;
 {{ LOG_PLAIN }} - script log in PLAIN text format</description>
             <message_templates>

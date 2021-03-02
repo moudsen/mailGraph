@@ -6,7 +6,7 @@
     "cli_eventValue": 0,
     "cli_duration": 0,
     "cli_recipient": "recipient@domain.com",
-    "cli_subject": "{{ HOST_NAME }}:  ({{ EVENT_SEVERITY }}) {{ EVENT_NAME }}",
+    "cli_subject": "{{ HOST_NAME|raw }}:  ({{ EVENT_SEVERITY }}) {{ EVENT_NAME|raw }}",
     "cli_baseURL": "https:\/\/domain.com\/zabbix\/",
     "zabbix_user": "alogicalusername",
     "zabbix_user_pwd": "astrongpassword",

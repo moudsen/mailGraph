@@ -69,6 +69,9 @@
         Trigger ID: <a href="{{ TRIGGER_URL }}">{{ TRIGGER_ID }}</a> //
         Item ID: <a href="{{ ITEM_URL }}">{{ ITEM_ID }}</a> //
         Host ID: <a href="{{ HOST_URL }}">{{ HOST_ID }}</a>
+{% if GRAPH_ZABBIXLINK|length > 0 %}
+ // Graph ID: <a href="{{ GRAPH_ZABBIXLINK }}">{{ GRAPH_ID }}</a>
+{% endif %}
     </p>
 </body>
 </html>
