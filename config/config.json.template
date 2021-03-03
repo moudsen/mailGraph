@@ -17,5 +17,6 @@
     "smtp_port": 25,
     "smtp_transport": "none",
     "smtp_strict": "yes",
-    "graph_match": "any"
+    "graph_match": "any",
+    "period": "2d"
 }

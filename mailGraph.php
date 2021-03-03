@@ -20,6 +20,7 @@
     //                                 item does not have a graph associated
     // 1.16 2021/03/02 - Mark Oudsen - Found issue with graph.get not returning graphs to requested item ids
     //                                 Workaround programmed (fetch host graphs, search for certain itemids)
+    // 1.17 2021/03/02 - Mark Oudsen - Added ability to specify period of time displayed in the graph
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -42,7 +43,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.16';
+    $cVersion = 'v1.17';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -122,7 +123,7 @@
     // --- Store with unique name
     // --- Pass filename back to caller
 
-    function GraphImageById ($graphid, $width = 400, $height = 100, $graphType = 0, $showLegend = 0)
+    function GraphImageById ($graphid, $width = 400, $height = 100, $graphType = 0, $showLegend = 0, $period = '48h')
     {
         global $z_server;
         global $z_user;
@@ -140,7 +141,8 @@
         $z_url_index   = $z_server ."index.php";
         $z_url_graph   = $z_server ."chart2.php";
         $z_url_fetch   = $z_url_graph ."?graphid=" .$graphid ."&width=" .$width ."&height=" .$height .
-                                       "&graphtype=".$graphType."&legend=".$showLegend."&profileIdx=web.charts.filter";
+                                       "&graphtype=".$graphType."&legend=".$showLegend."&profileIdx=web.graphs.filter".
+                                       "&from=now-".$period."&to=now";
 
         // Prepare POST login
         $z_login_data  = array('name' => $z_user, 'password' => $z_pass, 'enter' => "Sign in");
@@ -300,14 +302,20 @@
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // --- CONFIG DATA ---
+
     // [CONFIGURE] Change only when you want to place your config file somewhere else ...
     $config = readConfig(getcwd().'/config/config.json');
 
     _log('# Configuration taken from config.json'.$cCRLF.json_encode($config,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
+    // --- POST DATA ---
+
     // Read POST data
     $problemJSON = file_get_contents('php://input');
     $problemData = json_decode($problemJSON,TRUE);
+
+    // --- CLI DATA ---
 
     // Facilitate CLI based testing
     if (isset($argc))
@@ -317,6 +325,7 @@
             _log('# Invoked from CLI');
 
             // Assumes that config.json file has the correct information
+
             $problemData['itemId'] = $config['cli_itemId'];
             $problemData['triggerId'] = $config['cli_triggerId'];
             $problemData['eventId'] = $config['cli_eventId'];
@@ -325,6 +334,7 @@
             $problemData['baseURL'] = $config['cli_baseURL'];
             $problemData['duration'] = $config['cli_duration'];
             $problemData['subject'] = $config['cli_subject'];
+            $problemData['period'] = $config['cli_period'];
 
             // Switch on CLI log display
             $showLog = TRUE;
@@ -333,7 +343,8 @@
 
     _log('# Data passed from Zabbix'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
-    # --- Process into p_ variables for usage across the script
+    // --- CHECK AND SET P_ VARIABLES ---
+    // FROM POST OR CLI DATA ---
 
     if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
     $p_itemId = intval($problemData['itemId']);
@@ -368,6 +379,11 @@
     $p_showLegend = 0;
     if (isset($problemData['showLegend'])) { $p_showLegend = intval($problemData['showLegend']); }
 
+    $p_period = '48h';
+    if (isset($problemData['period'])) { $p_period = $problemData['period']; }
+
+    // FROM CONFIG DATA
+
     $p_smtp_server = 'localhost';
     if (isset($config['smtp_server'])) { $p_smtp_server = $config['smtp_server']; }
 
@@ -384,7 +400,7 @@
     $p_graph_match = 'any';
     if ((isset($config['graph_match'])) && ($config['graph_match']=='exact')) { $p_graph_match = 'exact'; }
 
-    // --- CONFIGURATION ---
+    // --- GLOBAL CONFIGURATION ---
 
     // Script related settings
     $z_url = $config['script_baseurl'];             // Script URL location (for relative paths to images, templates, log, tmp)
@@ -413,38 +429,15 @@
     $z_server = $p_URL;                             // Zabbix server URL from config
     $z_url_api = $z_server  ."api_jsonrpc.php";     // Zabbix API URL
 
-    // Check accessibility of paths and files
-    //TODO: Check write access?
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Check accessibility of paths and template files //////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    if (!file_exists($z_images_path))
-    {
-        echo 'Image path inaccessible?'.$cCRLF;
-        die;
-    }
-
-    if (!file_exists($z_tmp_cookies))
-    {
-        echo 'Cookies temporary path inaccessible?'.$cCRLF;
-        die;
-    }
-
-    if (!file_exists($z_log_path))
-    {
-        echo 'Log path inaccessible?'.$cCRLF;
-        die;
-    }
-
-    if (!file_exists($z_template_path.'html.template'))
-    {
-        echo 'HTML template missing?'.$cCRLF;
-        die;
-    }
-
-    if (!file_exists($z_template_path.'plain.template'))
-    {
-        echo 'PLAIN template missing?'.$cCRLF;
-        die;
-    }
+    if (!is_writable($z_images_path)) { echo 'Image path inaccessible?'.$cCRLF; die; }
+    if (!is_writable($z_tmp_cookies)) { echo 'Cookies temporary path inaccessible?'.$cCRLF; die; }
+    if (!is_writable($z_log_path)) { echo 'Log path inaccessible?'.$cCRLF; die; }
+    if (!file_exists($z_template_path.'html.template')) { echo 'HTML template missing?'.$cCRLF; die; }
+    if (!file_exists($z_template_path.'plain.template')) { echo 'PLAIN template missing?'.$cCRLF; die; }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Fetch information via API ////////////////////////////////////////////////////////////////////////////
@@ -665,14 +658,19 @@
     $graphFile = '';
     $graphURL = '';
 
+    // If we have any matching graph, make the embedding information available
+
     if ((sizeof($matchedGraphs)+sizeof($otherGraphs))>0)
     {
-        // TODO: if multiple graphs, pick the first one or the one that is TAGGED with a mailGraph tag/value
+        // Exact match goes first
 
         if (sizeof($matchedGraphs)>0)
         {
             _log('# Adding MATCHED graph #'.$matchedGraphs[0]['graphid']);
-            $graphFile = GraphImageById($matchedGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$matchedGraphs[0]['graphtype'],$p_showLegend);
+            $graphFile = GraphImageById($matchedGraphs[0]['graphid'],
+                                        $p_graphWidth,$p_graphHeight,
+                                        $matchedGraphs[0]['graphtype'],
+                                        $p_showLegend,$p_period);
 
             _log('> Filename = '.$graphFile);
 
@@ -686,7 +684,10 @@
             if (($p_graph_match!='exact') && (sizeof($otherGraphs)>0))
             {
                 _log('# Adding OTHER graph #'.$otherGraphs[0]['graphid']);
-                $graphFile = GraphImageById($otherGraphs[0]['graphid'],$p_graphWidth,$p_graphHeight,$otherGraphs[0]['graphtype'],$p_showLegend);
+                $graphFile = GraphImageById($otherGraphs[0]['graphid'],
+                                            $p_graphWidth,$p_graphHeight,
+                                            $otherGraphs[0]['graphtype'],
+                                            $p_showLegend);
 
                 _log('> Filename = '.$graphFile);
 

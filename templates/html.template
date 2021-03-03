@@ -45,7 +45,9 @@
  ({{ HOST_ERROR }})
 {% endif %}
                     <br/>
+{% if EVENT_OPDATE|length > 0 %}
                     Operational data: <b>{{ EVENT_OPDATA }}</b><br/>
+{% endif %}
                     Status: <b>{{ EVENT_STATUS }}</b><br/>
                     Severity: <b>{{ EVENT_SEVERITY }}</b><br/>
 {% if EVENT_SEVERITY == "Resolved" %}
