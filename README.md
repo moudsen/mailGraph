@@ -1,4 +1,4 @@
-# mailGraph
+# mailGraph (v1.17)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
@@ -50,6 +50,8 @@ I've tested my code with Zabbix 5.0.5 (LTS) on Linux with local Postfix. Not sur
 **"zabbix_user_api"** and **zabbix_user_pwd** must also be a Zabbix SuperAdmin user/password you need to have/create to login to the Zabbix API (this is for grabbing the information of the event via the Zabbix API).
 
 **"mail_from"** must be a valid e-mail address which represents the 'from' address in the mails that are sent (ie. "zabbix.mailgraph.noreply@domain.com") that is acceptable by your mail server.
+
+**"period"** must be a valid Zabbix period (like "1d", "1w" or "48h") that will be applied to the graph. Default is "48h" when not specified.
 
 # Load the Media Type "MailGraph" into Zabbix
 - Login to your Zabbix instance
