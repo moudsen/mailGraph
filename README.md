@@ -1,4 +1,4 @@
-# mailGraph (v1.17)
+# mailGraph (v1.18)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
@@ -72,6 +72,11 @@ You can change the "subject" of the e-mail that is sent (note that the markup ca
 
 # Actions configuration
 At this point the Media type is ready for configuration under "actions" as per the regular way of Zabbix alert processing. Please refer to the manual how to configure.
+
+# Trigger tags
+**"mailGraph.period"** to set a specific graph period for this particular Trigger.
+
+**"mailGraph.graph"** to set a specific graph to be embedded for this particular Trigger.
 
 # What if there is no graph added to the e-mail?
 There is no immediate relationship between a trigger and a graph. This is why the script uses the following technique to find graphs to are associated to the trigger:
