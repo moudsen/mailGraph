@@ -1,4 +1,4 @@
-# mailGraph (v1.18)
+# mailGraph (v1.19)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
@@ -7,21 +7,21 @@ Zabbix Media module and scripts for sending e-mail alerts with graphs.
 Although still under development (consider the current releases "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
 
 **List of item to-do**
-1. Passing dynamic parameters via the Webhook for template/output usage => WORK IN PROGRESS, release 1.20
-2. Finding "beta testers" to assist me in further enhancing the use cases => awaiting the first users/feedback!
+1. Finding "beta testers" to assist me in further enhancing the use cases => awaiting the first users/feedback!
+2. Disassociate fetching the graph from the main routine; this is mainly driven by the fact that other Zabbix Media types face the same challenge for picking up graphs hence my work could also be of great use for including graphs in Telegraph, Slack, etc.
 
 # Zabbix enhancements
 https://support.zabbix.com/browse/ZBXNEXT-6534
-Main ticket asking how to get this Media type onboarded in the Media type section of the manual and the associated Zabbix GitHub directory.
+Main ticket asking how to get this Media type onboarded in the Media type section of the manual and the associated Zabbix GitHub directory. Although the request to get added has been kind of 'declined', I'm still pushing forward with my development as the original ask for such functionality is from **2010** (!).
 
 # Installation pre-requisites
 The suggested installation path of this script is on the same host where Zabbix lives but outside the actual Zabbix directory, although it is possible to run the script entirely somewhere else (the code is webhook based, picking up information from Zabbix is via the front-end login and API).
 
-I've tested my code with Zabbix 5.0.5 (LTS) on Linux with local Postfix. Not sure if it can/will run in any Zabbix versions under 5 or on other environments.
+I've tested my code with Zabbix 5.0.x (LTS) on Linux with local Postfix. Not sure if it can/will run in any Zabbix versions under 5 or on other environments as I have no facilities nor time available to test on any lower versions.
 
 # I'm assuming
 - You are familiar with "composer"
-- You know how to configure and secure a webserver/virtual host
+- You know how to configure and secure a webserver/virtual host (Apache, NGINX, etc.)
 - That you have CURL and PHP installed
 
 # Prepare the installation
@@ -78,6 +78,12 @@ At this point the Media type is ready for configuration under "actions" as per t
 
 **"mailGraph.graph"** to set a specific graph to be embedded for this particular Trigger.
 
+**"mailGraph.showLegend"** to set a specific graph to show or hide for this particular Trigger.
+
+**"mailGraph.graphHeight"** to set a specific graph height for this particular Trigger.
+
+**"mailGraph.graphWidth"** to set a specific graph width for this particular Trigger.
+
 # What if there is no graph added to the e-mail?
 There is no immediate relationship between a trigger and a graph. This is why the script uses the following technique to find graphs to are associated to the trigger:
 1. The trigger API call returns a list of "functions". Each functions holds an "item id".
@@ -85,7 +91,7 @@ There is no immediate relationship between a trigger and a graph. This is why th
 3. Traversing this set of grahps, we are looking for graphs that have the actual "item id" associated. If there is no association found, we can still use any graph as it is still relevant to the trigger, but it will have an indirect relationship.
 4. Most ideally we pick the graph that has the actual "item id" matched. If not, we pick the first grapgh we've managed to find.
 
-In reality this may means that there are items (like simple "interface up/down" configured) that have no graphs defined. In this occasion there is no graph attached to the message. If you wish a graph to appear at this point, just add a graph using that item and next time this graph will show in the message.
+In reality this may means that there are items (like simple "interface up/down" configured) that have no graphs defined. In this occasion there is no graph attached to the message. If you wish a graph to appear at this point, just add a graph using that item and next time this graph will show in the message or add the tag "mailGraph.graph" to the trigger pointing at a graph you would like to display for this trigger.
 
 # Template adjustments
 I've picked TWIG as the template processor, where the following macros are available for your convenience. Feel free to adjust the html.template and plain.template files as you see fit for your situation!
@@ -154,6 +160,8 @@ Values available:
 
 {{ LOG_PLAIN }} - script log in PLAIN text format
 
+You can define CUSTOM information that is passed from Zabbix by introducing a Macro of which the name starts with 'info'. Each 'infoXXX' will be made available for use in the template as {{ infoXXX }}. This allows you to add _any_ other information you want to pass from Zabbix straight into the template.
+
 # Troubleshooting
 In general if something goes wrong (no output), use the following sequence to identify where the error has occured (and raise an issue in this repository so I can take a look at it):
 - Goto Zabbix => Reports => Action Log and search for events with Status "Failed"
@@ -162,7 +170,7 @@ In general if something goes wrong (no output), use the following sequence to id
 
 The easiest way to test what is happening is to now goto Administration => Media types and hit the "Test" at the right hand side for MailGraph.
 - Replace relevant macros with information (eventId, triggerId, itemId, recipient, baseUrl and URL) and hit "Test"
-- The last line in the result will tell you what the problem is (most likely an access or connectivity issue)
+- The last line in the result or the log provided at the bottom will tell you what the problem is (most likely an access or connectivity issue)
 - Fix accordingly and retry
 
 To facilitate troubleshooting, you can (at code level):
@@ -174,4 +182,4 @@ In case of an issue that happens before an e-mail is sent, you can also perform 
 
 Note that you have to set the configuration items starting with "cli" in config.json with actual values from a previous message to make this work!
 
-Last resort is to raise an issue in this repository and I will try to assist as soon as possible to fix it.
+Last resort is to raise an issue in this repository and I will try to assist as soon as possible to fix it!
