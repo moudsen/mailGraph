@@ -4,7 +4,7 @@ Zabbix Media module and scripts for sending e-mail alerts with graphs.
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
 
 # WORK IN PROGRESS
-Although still under development (consider the current releases "beta"), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
+Although still under development (v1.19 is ready to leave BETA status), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
 
 **List of item to-do**
 1. Finding "beta testers" to assist me in further enhancing the use cases => awaiting the first users/feedback!
@@ -13,6 +13,9 @@ Although still under development (consider the current releases "beta"), I need 
 # Zabbix enhancements
 https://support.zabbix.com/browse/ZBXNEXT-6534
 Main ticket asking how to get this Media type onboarded in the Media type section of the manual and the associated Zabbix GitHub directory. Although the request to get added has been kind of 'declined', I'm still pushing forward with my development as the original ask for such functionality is from **2010** (!).
+
+https://support.zabbix.com/browse/ZBXNEXT-6548
+Separation of the Graph generator code to allow for other webhooks to also use the facility for inclusion of graphs in their respective Media types.
 
 # Installation pre-requisites
 The suggested installation path of this script is on the same host where Zabbix lives but outside the actual Zabbix directory, although it is possible to run the script entirely somewhere else (the code is webhook based, picking up information from Zabbix is via the front-end login and API).
