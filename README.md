@@ -23,6 +23,7 @@ I've tested my code with Zabbix 5.0.x (LTS) on Linux with local Postfix. Not sur
 - You are familiar with "composer"
 - You know how to configure and secure a webserver/virtual host (Apache, NGINX, etc.)
 - That you have CURL and PHP installed
+- That you are familiar with Zabbix 5.x (specifically for setting up "Actions")
 
 # Prepare the installation
 - Download or clone this repository
@@ -160,7 +161,7 @@ Values available:
 
 {{ LOG_PLAIN }} - script log in PLAIN text format
 
-You can define CUSTOM information that is passed from Zabbix by introducing a Macro of which the name starts with 'info'. Each 'infoXXX' will be made available for use in the template as {{ infoXXX }}. This allows you to add _any_ other information you want to pass from Zabbix straight into the template.
+You can define _CUSTOM_ information that is passed from Zabbix by introducing a Macro of which the name starts with 'info'. Each 'infoXXX' will be made available for use in the template as {{ infoXXX }}. This allows you to add _any_ other information you want to pass from Zabbix straight into the template.
 
 # Troubleshooting
 In general if something goes wrong (no output), use the following sequence to identify where the error has occured (and raise an issue in this repository so I can take a look at it):
