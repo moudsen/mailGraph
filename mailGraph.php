@@ -21,8 +21,9 @@
     // 1.16 2021/03/02 - Mark Oudsen - Found issue with graph.get not returning graphs to requested item ids
     //                                 Workaround programmed (fetch host graphs, search for certain itemids)
     // 1.17 2021/03/02 - Mark Oudsen - Added ability to specify period of time displayed in the graph
-    // 1.18 2021/03/04 - Mark Oudsen - Added ability to specify a deviating period of time per trigger
-    //                                 Added ability to specify different graph to be embedded
+    // 1.18 2021/03/04 - Mark Oudsen - Added ability to specify Tags per trigger
+    //                                 Shorten long "lastvalue" or "prevvalue"
+    // 1.19 2021/03/05 - Mark Oudsen - Added ability to pass Zabbix 'infoXXX' parameters for TWIG template
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -45,7 +46,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.18';
+    $cVersion = 'v1.19';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -346,7 +347,7 @@
     _log('# Data passed from Zabbix'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- CHECK AND SET P_ VARIABLES ---
-    // FROM POST OR CLI DATA ---
+    // FROM POST OR CLI DATA
 
     if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
     $p_itemId = intval($problemData['itemId']);
@@ -383,6 +384,13 @@
 
     $p_period = '48h';
     if (isset($problemData['period'])) { $p_period = $problemData['period']; }
+
+    // DYNAMIC VARIABLES FROM ZABBIX
+
+    foreach($problemData as $aKey=>$aValue)
+    {
+        if (substr($aKey,0,4)=='info') { $mailData[$aKey] = $aValue; }
+    }
 
     // FROM CONFIG DATA
 
@@ -501,16 +509,32 @@
 
     foreach($thisTrigger['result'][0]['tags'] as $aTag)
     {
-        if ($aTag['tag']=='mailGraph.period')
+        switch ($aTag['tag'])
         {
-            $p_period = $aTag['value'];
-            _log('+ Graph display period override = '.$p_period);
-        }
+            case 'mailGraph.period':
+                $p_period = $aTag['value'];
+                _log('+ Graph display period override = '.$p_period);
+                break;
 
-        if ($aTag['tag']=='mailGraph.graph')
-        {
-            $forceGraph = intval($aTag['value']);
-            _log('+ Graph ID to display = '.$forceGraph);
+            case 'mailGraph.graph':
+                $forceGraph = intval($aTag['value']);
+                _log('+ Graph ID to display = '.$forceGraph);
+                break;
+
+            case 'mailGraph.showLegend':
+                $p_showLegend = intval($aTag['value']);
+                _log('+ Graph display legend override = '.$p_showLegend);
+                break;
+
+            case 'mailGraph.graphWidth':
+                $p_graphWidth = intval($aTag['value']);
+                _log('+ Graph height override = '.$$p_graphWidth);
+                break;
+
+            case 'mailGraph.graphHeight':
+                $p_graphHeight = intval($aTag['value']);
+                _log('+ Graph height override = '.$$p_graphHeight);
+                break;
         }
     }
 
@@ -542,6 +566,10 @@
     // Catch elements that have a recordset definition returned as a value ...
     if (substr($mailData['ITEM_LASTVALUE'],0,5)=='<?xml') { $mailData['ITEM_LASTVALUE'] = '[record]'; }
     if (substr($mailData['ITEM_PREVIOUSVALUE'],0,5)=='<?xml') { $mailData['ITEM_PREVIOUSTVALUE'] = '[record]'; }
+
+    // Catch long elements
+    if (strlen($mailData['ITEM_LASTVALUE'])>50) { $mailData['ITEM_LASTVALUE'] = substr($mailData['ITEM_LASTVALUE'],0,50).' ...'; }
+    if (strlen($mailData['ITEM_PREVIOUSVALUE'])>50) { $mailData['ITEM_PREVIOUSVALUE'] = substr($mailData['ITEM_PREVIOUSVALUE'],0,50).' ...'; }
 
     // --- GET HOST INFO ---
 
@@ -712,63 +740,45 @@
 
     // If we have any matching graph, make the embedding information available
 
-    if ($forceGraph>0)
+    if ((sizeof($matchedGraphs) + sizeof($otherGraphs) + $forceGraph)>0)
     {
-        _log('# Adding FORCED graph #'.$forceGraph);
-        $graphFile = GraphImageById($forceGraph,
+        if ($forceGraph>0)
+        {
+            $theGraph = $forceGraphInfo;
+            $theType = 'Forced';
+        }
+        else
+        {
+            if (sizeof($matchedGraphs)>0)
+            {
+                $theGraph = $matchedGraphs[0];
+                $theType = 'Matched';
+            }
+            else
+            {
+                if (sizeof($otherGraphs)>0)
+                {
+                    $theGraph = $otherGraphs[0];
+                    $theType = 'Other';
+                }
+            }
+        }
+
+        $mailData['GRAPH_ID'] = $theGraph['graphid'];
+        $mailData['GRAPH_NAME'] = $theGraph['name'];
+        $mailData['GRAPH_MATCH'] = $theType;
+
+        _log('# Adding '.strtoupper($theType).' graph #'.$mailData['GRAPH_ID']);
+
+        $graphFile = GraphImageById($mailData['GRAPH_ID'],
                                     $p_graphWidth,$p_graphHeight,
-                                    $forceGraphInfo['result'][0]['graphtype'],
+                                    $theGraph['graphtype'],
                                     $p_showLegend,$p_period);
 
         _log('> Filename = '.$graphFile);
 
-        $mailData['GRAPH_ID'] = $forceGraph;
-        $mailData['GRAPH_NAME'] = $forceGraphInfo['result'][0]['name'];
         $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
-        $mailData['GRAPH_MATCH'] = 'Forced';
-    }
-    else
-    {
-        if ((sizeof($matchedGraphs)+sizeof($otherGraphs))>0)
-        {
-            // Exact match goes first
-
-            if (sizeof($matchedGraphs)>0)
-            {
-                _log('# Adding MATCHED graph #'.$matchedGraphs[0]['graphid']);
-                $graphFile = GraphImageById($matchedGraphs[0]['graphid'],
-                                            $p_graphWidth,$p_graphHeight,
-                                            $matchedGraphs[0]['graphtype'],
-                                            $p_showLegend,$p_period);
-
-                _log('> Filename = '.$graphFile);
-
-                $mailData['GRAPH_ID'] = $matchedGraphs[0]['graphid'];
-                $mailData['GRAPH_NAME'] = $matchedGraphs[0]['name'];
-                $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
-                $mailData['GRAPH_MATCH'] = 'Exact';
-            }
-            else
-            {
-                if (($p_graph_match!='exact') && (sizeof($otherGraphs)>0))
-                {
-                    _log('# Adding OTHER graph #'.$otherGraphs[0]['graphid']);
-                    $graphFile = GraphImageById($otherGraphs[0]['graphid'],
-                                                $p_graphWidth,$p_graphHeight,
-                                                $otherGraphs[0]['graphtype'],
-                                                $p_showLegend);
-
-                    _log('> Filename = '.$graphFile);
-
-                    $mailData['GRAPH_ID'] = $otherGraphs[0]['graphid'];
-                    $mailData['GRAPH_NAME'] = $otherGraphs[0]['name'];
-                    $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
-                    $mailData['GRAPH_MATCH'] = 'Other';
-                }
-            }
-
-            $mailData['GRAPH_ZABBIXLINK'] = $z_server.'/graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
-        }
+        $mailData['GRAPH_ZABBIXLINK'] = $z_server.'/graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
     }
 
     // Prepare HTML LOG content

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2021-02-28T20:27:03Z</date>
+    <date>2021-03-05T10:51:39Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
@@ -9,7 +9,7 @@
             <parameters>
                 <parameter>
                     <name>baseURL</name>
-                    <value>https://domain.com/zabbix/</value>
+                    <value>https://mydomain.com/zabbix/</value>
                 </parameter>
                 <parameter>
                     <name>duration</name>
@@ -36,6 +36,10 @@
                     <value/>
                 </parameter>
                 <parameter>
+                    <name>infoGiveMeAName</name>
+                    <value>A generic value you want to pass to MailGraph</value>
+                </parameter>
+                <parameter>
                     <name>itemId</name>
                     <value>{ITEM.ID}</value>
                 </parameter>
@@ -57,58 +61,65 @@
                 </parameter>
                 <parameter>
                     <name>URL</name>
-                    <value>https://domain.com/mailGraph.php</value>
+                    <value>https://mydomain.com/mailGraph.php</value>
                 </parameter>
             </parameters>
             <script>try {&#13;
-  // Pickup parameters&#13;
-  params = JSON.parse(value),&#13;
-           req = new CurlHttpRequest(),&#13;
-           fields = {},&#13;
-           resp = '',&#13;
-           result = { tags: {} };&#13;
+    // Pickup parameters&#13;
+    params = JSON.parse(value),&#13;
+        req = new CurlHttpRequest(),&#13;
+        fields = {},&#13;
+        resp = '',&#13;
+        result = { tags: {} };&#13;
 &#13;
-  // Set HTTP proxy if required&#13;
-  if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') { req.setProxy(params.HTTPProxy); }&#13;
+    // Set HTTP proxy if required&#13;
+    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') { req.setProxy(params.HTTPProxy); }&#13;
 &#13;
-  // Declare output type&#13;
-  req.AddHeader('Content-Type: application/json');&#13;
+    // Declare output type&#13;
+    req.AddHeader('Content-Type: application/json');&#13;
 &#13;
-  // Must have fields&#13;
-  fields.itemId = params.itemId;&#13;
-  fields.triggerId = params.triggerId;&#13;
-  fields.eventId = params.eventId;&#13;
-  fields.eventValue = params.eventValue;&#13;
-  fields.recipient = params.recipient;&#13;
-  fields.baseURL = params.baseURL;&#13;
-  fields.duration = params.duration;&#13;
+    // Must have fields&#13;
+    fields.itemId = params.itemId;&#13;
+    fields.triggerId = params.triggerId;&#13;
+    fields.eventId = params.eventId;&#13;
+    fields.eventValue = params.eventValue;&#13;
+    fields.recipient = params.recipient;&#13;
+    fields.baseURL = params.baseURL;&#13;
+    fields.duration = params.duration;&#13;
 &#13;
-  // Optional fields&#13;
-  if (typeof params.graphWidth === 'string') { fields.graphWidth = params.graphWidth; }&#13;
-  if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }&#13;
-  if (typeof params.subject === 'string') { fields.subject = params.subject; }&#13;
-  if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }&#13;
+    // Optional fields&#13;
+    if (typeof params.graphWidth === 'string') { fields.graphWidth = params.graphWidth; }&#13;
+    if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }&#13;
+    if (typeof params.subject === 'string') { fields.subject = params.subject; }&#13;
+    if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }&#13;
 &#13;
-  // Post information to the processing script&#13;
-  Zabbix.Log(4, '[MailGraph Webhook] Sending request: ' + params.URL + '?' + JSON.stringify(fields));&#13;
-  var resp = req.Post(params.URL,JSON.stringify(fields));&#13;
-  Zabbix.Log(4, '[Mailgraph Webhook] Receiving response:' + resp);&#13;
+    // Add generic fields&#13;
+    Object.keys(params).forEach(function(key) {&#13;
+        if (key.substring(0, 4) == 'info') {&#13;
+            fields[key] = params[key];&#13;
+        }&#13;
+    });&#13;
 &#13;
-  // If there was an error, report it&#13;
-  if (req.Status() != 200) { throw JSON.parse(resp).errors[0]; }&#13;
+    // Post information to the processing script&#13;
+    Zabbix.Log(4, '[MailGraph Webhook] Sending request: ' + params.URL + '?' + JSON.stringify(fields));&#13;
+    var resp = req.Post(params.URL,JSON.stringify(fields));&#13;
+    Zabbix.Log(4, '[Mailgraph Webhook] Receiving response:' + resp);&#13;
 &#13;
-  // We expect the message id back from the processing script&#13;
-  resp = JSON.parse(resp);&#13;
-  result.tags.__message_id = resp.messageId;&#13;
+    // If there was an error, report it&#13;
+    if (req.Status() != 200) { throw JSON.parse(resp).errors[0]; }&#13;
 &#13;
-  // Pass the result back to Zabbix&#13;
-  return JSON.stringify(result);&#13;
+    // We expect the message id back from the processing script&#13;
+    resp = JSON.parse(resp);&#13;
+    result.tags.__message_id = resp.messageId;&#13;
+&#13;
+    // Pass the result back to Zabbix&#13;
+    return JSON.stringify(result);&#13;
 }&#13;
 catch (error)&#13;
 {&#13;
-  // In case something went wrong in the processing, pass the error back to Zabbix&#13;
-  Zabbix.Log(127, 'MailGraph notification failed : '+error);&#13;
-  throw 'MailGraph notification failed : '+error;&#13;
+    // In case something went wrong in the processing, pass the error back to Zabbix&#13;
+    Zabbix.Log(127, 'MailGraph notification failed : '+error);&#13;
+    throw 'MailGraph notification failed : '+error;&#13;
 }</script>
             <process_tags>YES</process_tags>
             <description>The &quot;URL&quot; must point to the location of the processing script. If a proxy is required, define &quot;HTTPProxy&quot; for the proxy address.&#13;
@@ -120,38 +131,7 @@ Customization:&#13;
 &#13;
 The html.template and plain.template files can be adjusted (TWIG format).&#13;
 &#13;
-Values available:&#13;
-{{ baseURL }} - base url of the Zabbix system (use for references to API and login)&#13;
-{{ TRIGGER_ID }} - id of the applicable trigger&#13;
-{{ TRIGGER_DESCRIPTION }} - raw trigger description (note: macros are not parsed!)&#13;
-{{ TRIGGER_COMMENTS }} - comments of the trigger&#13;
-{{ TRIGGER_URL }} - url of the trigger form&#13;
-{{ ITEM_ID }} - id of the associated item to the trigger&#13;
-{{ ITEM_KEY }} - key of the item&#13;
-{{ ITEM_NAME }} - item name&#13;
-{{ ITEM_DESCRIPTION }} - description of the item&#13;
-{{ ITEM_LASTVALUE }} - last value of the item&#13;
-{{ ITEM_PREVIOUSVALUE }} - the value of the before LASTVALUE&#13;
-{{ ITEM_URL }} - url of the item form&#13;
-{{ HOST_ID }} - id of the associated host to the item&#13;
-{{ HOST_NAME }} - name of the host&#13;
-{{ HOST_ERROR }} - last error state of the applicable host&#13;
-{{ HOST_DESCRIPTION }} - description of the host&#13;
-{{ HOST_URL }} - url of the host form&#13;
-{{ EVENT_ID }} - id of the associated event&#13;
-{{ EVENT_NAME }} - name of the event (note: macros are parsed!)&#13;
-{{ EVENT_OPDATA }} - associated operational data of the vent&#13;
-{{ EVENT_VALUE }} - event state (0=Recovered, 1=Triggered/Active)&#13;
-{{ EVENT_SEVERITY }} - severity of the event&#13;
-{{ EVENT_STATUS }} - status of the event&#13;
-{{ EVENT_URL }} - url of the event details&#13;
-{{ GRAPH_ID }} - id of the (first) associated graph that contains the item&#13;
-{{ GRAPH_NAME }} - name of this graph&#13;
-{{ GRAPH_URL }} - URL to this graph (assuming script produces to an accessible location)&#13;
-{{ GRAPH_CID }} - IMG embed string (&lt;img src=&quot;{{ GRAPH_CID }}&quot; /&gt;)&#13;
-{{ GRAPH_ZABBIXLINK }} - URL to the graph item in Zabbix
-{{ LOG_HTML }} - script log in HTML format&#13;
-{{ LOG_PLAIN }} - script log in PLAIN text format</description>
+More details are available at https://github.com/moudsen/mailGraph</description>
             <message_templates>
                 <message_template>
                     <event_source>TRIGGERS</event_source>
@@ -202,4 +182,3 @@ itemId: {ITEM.ID]</message>
         </media_type>
     </media_types>
 </zabbix_export>
-
