@@ -24,6 +24,8 @@
     // 1.18 2021/03/04 - Mark Oudsen - Added ability to specify Tags per trigger
     //                                 Shorten long "lastvalue" or "prevvalue"
     // 1.19 2021/03/05 - Mark Oudsen - Added ability to pass Zabbix 'infoXXX' parameters for TWIG template
+    //
+    // 1.30 2021/xx/xx - Mark Oudsen - Preparing for v1.30
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
