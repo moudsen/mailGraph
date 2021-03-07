@@ -1,14 +1,11 @@
-# mailGraph (v1.19)
+# mailGraph (v1.20)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
 
-# WORK IN PROGRESS
-Although still under development (v1.19 is ready to leave BETA status), I need feedback and interaction with other users of Zabbix that are looking for the functionality I've developed hence I'm releasing my code to the world.
-
 **List of item to-do**
-1. Finding "beta testers" to assist me in further enhancing the use cases => awaiting the first users/feedback!
-2. Disassociate fetching the graph from the main routine; this is mainly driven by the fact that other Zabbix Media types face the same challenge for picking up graphs hence my work could also be of great use for including graphs in Telegraph, Slack, etc.
+1. Disassociate fetching the graph from the main routine; this is mainly driven by the fact that other Zabbix Media types face the same challenge for picking up graphs hence my work could also be of great use for including graphs in Telegraph, Slack, etc.
+2. Currently only chart graphs are supported. Other graph types will become supported in a later version.
 
 # Zabbix enhancements
 https://support.zabbix.com/browse/ZBXNEXT-6534
@@ -20,13 +17,20 @@ Separation of the Graph generator code to allow for other webhooks to also use t
 # Installation pre-requisites
 The suggested installation path of this script is on the same host where Zabbix lives but outside the actual Zabbix directory, although it is possible to run the script entirely somewhere else (the code is webhook based, picking up information from Zabbix is via the front-end login and API).
 
-I've tested my code with Zabbix 5.0.x (LTS) on Linux with local Postfix. Not sure if it can/will run in any Zabbix versions under 5 or on other environments as I have no facilities nor time available to test on any lower versions.
+I've tested my code with Zabbix on Linux with local Postfix. Not sure if it can/will run in any Zabbix versions under 5 or on other environments as I have no facilities nor time available to test on any lower versions.
 
 # I'm assuming
+- That you have Composer, CURL and PHP installed
 - You are familiar with "composer"
 - You know how to configure and secure a webserver/virtual host (Apache, NGINX, etc.)
-- That you have CURL and PHP installed
 - That you are familiar with Zabbix 5.x (specifically for setting up "Actions")
+
+This code has been tested with the following software versions:
+- Zabbix 5.0.5
+- PHP v7.4.6
+- Swiftmailer v6.2.5
+- Twig v3.3.0
+- Curl 7.61.1
 
 # Prepare the installation
 - Download or clone this repository
@@ -43,7 +47,7 @@ I've tested my code with Zabbix 5.0.x (LTS) on Linux with local Postfix. Not sur
 
 # Configuration
 - Goto your /config directory
-- Two ways to configure the config.json file: 1) with config.php or 2) with your favorite text editor (note that you must have knowledge of JSON format to use this option)'
+- Two ways to configure the config.json file: 1) with config.php or 2) with your favorite text editor (note that you must have knowledge of JSON format to use the latter option)'
 - List the available configuration options with "php config.php config.json list"
 - Change any option with "php config.php config.json replace 'key_name' 'new_value'" (note the usage of the single quotes from the command-line!)
 
@@ -64,20 +68,22 @@ I've tested my code with Zabbix 5.0.x (LTS) on Linux with local Postfix. Not sur
 - Edit the new media type
 - Configure some of the macros associated
 
-"baseURL" must contain your Zabbix URL (ie. "https://mydomain.com/zabbix/"). Note the ending '/'!
+**"baseURL"** must contain your Zabbix URL (ie. "https://mydomain.com/zabbix/"). Note the ending '/'!
 
-You can set your custom "graphWidth" and "GraphHeight" to your convenience.
+You can set your custom **"graphWidth"** and **"GraphHeight"** to your convenience.
 
-You can switch the graph legend on/off with "showLegend" (0=off,1=on).
+You can switch the graph legend on/off with **"showLegend"** (0=off,1=on).
 
-You can change the "subject" of the e-mail that is sent (note that the markup can be a combination of Zabbix MACRO or TWIG notation!).
+You can change the **"subject"** of the e-mail that is sent (note that the markup can be a combination of Zabbix MACRO or TWIG notation!).
 
-"URL" is the url to the mailGraph script (ie. "https://mydomain.com/mailGraph.php").
+**"URL"** is the url to the mailGraph script (ie. "https://mydomain.com/mailGraph.php").
 
 # Actions configuration
 At this point the Media type is ready for configuration under "actions" as per the regular way of Zabbix alert processing. Please refer to the manual how to configure.
 
 # Trigger tags
+Each Trigger can have it's own specific settings which can configured through Tags:
+
 **"mailGraph.period"** to set a specific graph period for this particular Trigger.
 
 **"mailGraph.graph"** to set a specific graph to be embedded for this particular Trigger.
