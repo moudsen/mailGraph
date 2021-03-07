@@ -164,7 +164,7 @@ Values available:
 
 {{ LOG_PLAIN }} - script log in PLAIN text format
 
-You can define _CUSTOM_ information that is passed from Zabbix by introducing a Macro of which the name starts with 'info'. Each 'infoXXX' will be made available for use in the template as {{ infoXXX }}. This allows you to add _any_ other information you want to pass from Zabbix straight into the template.
+You can define _CUSTOM_ information that is passed from Zabbix by introducing a Macro of which the name starts with 'info'. Each 'infoXXX' will be made available for use in the template as {{ infoXXX }} and will be HTML-escaped automatically. This allows you to add _any_ other information you want to pass from Zabbix straight into the template.
 
 # Troubleshooting
 In general if something goes wrong (no output), use the following sequence to identify where the error has occured (and raise an issue in this repository so I can take a look at it):
