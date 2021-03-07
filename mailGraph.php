@@ -24,6 +24,7 @@
     // 1.18 2021/03/04 - Mark Oudsen - Added ability to specify Tags per trigger
     //                                 Shorten long "lastvalue" or "prevvalue"
     // 1.19 2021/03/05 - Mark Oudsen - Added ability to pass Zabbix 'infoXXX' parameters for TWIG template
+    // 1.20 2021/03/07 - Mark Oudsen - Production level version - leaving BETA from here on ...
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -46,16 +47,16 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.19';
+    $cVersion = 'v1.20';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = TRUE;          // Comprehensive debug logging including log storage
-    $cDebugMail = TRUE;      // Include log in the mail message? (attachments)
-    $showLog = FALSE;        // Display the log - !! switch to TRUE when performing CLI debugging only !!!
+    $cDebug = FALSE;          // Extended debug logging mode
+    $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
+    $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
     // INCLUDE REQUIRED LIBRARIES (Composer)
     // (configure at same location as the script is running or load in your own central library)
@@ -94,7 +95,8 @@
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
         curl_setopt($ch, CURLOPT_POST, TRUE);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+        curl_setopt($ch, CURLOPT_POSTFIELDS,
+                         json_encode($data,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
         // Execute Curl
         $data = curl_exec($ch);
@@ -107,11 +109,11 @@
             $data .= 'Requested page = '.$url.$cCRLF;
             $data .= 'Error = '.curl_error($ch).$cCRLF;
         }
-		else
-		{
+        else
+        {
             _log('> Received '.strlen($data).' bytes');
-			$data = json_decode($data,TRUE);
-		}
+            $data = json_decode($data,TRUE);
+        }
 
         // Close Curl
         curl_close($ch);
@@ -418,10 +420,10 @@
 
     // Absolute path where to store the generated images - note: script does not take care of clearing out old images!
     $z_path = getcwd().'/';                         // Absolute base path on the filesystem for this url
-    $z_images_path = $z_path.'/images/';
-    $z_template_path = $z_path.'/templates/';
-    $z_tmp_cookies = $z_path.'//tmp/';
-    $z_log_path = $z_path.'/log/';
+    $z_images_path = $z_path.'images/';
+    $z_template_path = $z_path.'templates/';
+    $z_tmp_cookies = $z_path.'tmp/';
+    $z_log_path = $z_path.'log/';
 
     // Zabbix user (requires Super Admin access rights to access image generator script)
     $z_user = $config['zabbix_user'];
@@ -608,6 +610,7 @@
 
     // --- GET GRAPHS ASSOCIATED WITH THIS HOST ---
     // Note: graph.get where itemids are specified does not seem to work!
+    // https://support.zabbix.com/browse/ZBX-19090
 
     _log('# Retrieve associated graphs to this HOST');
 
@@ -778,7 +781,7 @@
         _log('> Filename = '.$graphFile);
 
         $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
-        $mailData['GRAPH_ZABBIXLINK'] = $z_server.'/graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
+        $mailData['GRAPH_ZABBIXLINK'] = $z_server.'graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
     }
 
     // Prepare HTML LOG content
@@ -799,10 +802,10 @@
 
     // Prepare others
 
-    $mailData['TRIGGER_URL'] = $z_server.'/triggers.php?form=update&triggerid='.$mailData['TRIGGER_ID'];
-    $mailData['ITEM_URL'] = $z_server.'/items.php?form=update&hostid='.$mailData['HOST_ID'].'&itemid='.$mailData['ITEM_ID'];
-    $mailData['HOST_URL'] = $z_server.'/zabbix/hosts.php?form=update&hostid='.$mailData['HOST_ID'];
-    $mailData['EVENTDETAILS_URL'] = $z_server.'/tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'];
+    $mailData['TRIGGER_URL'] = $z_server.'triggers.php?form=update&triggerid='.$mailData['TRIGGER_ID'];
+    $mailData['ITEM_URL'] = $z_server.'items.php?form=update&hostid='.$mailData['HOST_ID'].'&itemid='.$mailData['ITEM_ID'];
+    $mailData['HOST_URL'] = $z_server.'hosts.php?form=update&hostid='.$mailData['HOST_ID'];
+    $mailData['EVENTDETAILS_URL'] = $z_server.'tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'];
 
     $mailData['EVENT_DURATION'] = $p_duration;
 
@@ -811,6 +814,8 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     _log('# Setting up mailer');
+
+    // Do we need TLS or SSL?
 
     if (($p_smtp_transport=='tls') || ($p_smtp_transport=='ssl'))
     {
