@@ -25,6 +25,8 @@
     //                                 Shorten long "lastvalue" or "prevvalue"
     // 1.19 2021/03/05 - Mark Oudsen - Added ability to pass Zabbix 'infoXXX' parameters for TWIG template
     // 1.20 2021/03/07 - Mark Oudsen - Production level version - leaving BETA from here on ...
+    // 1.21 2021/03/09 - Mark Oudsen - Reverted graph.get code back to original code as it was not a bug but
+    //                                 a wrongly typed requested (should be ARRAY, not comma separated)!
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -47,7 +49,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.20';
+    $cVersion = 'v1.21';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -609,10 +611,15 @@
     _log('> Host macro data'.$cCRLF.json_encode($thisMacros,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- GET GRAPHS ASSOCIATED WITH THIS HOST ---
-    // Note: graph.get where itemids are specified does not seem to work!
-    // https://support.zabbix.com/browse/ZBX-19090
 
-    _log('# Retrieve associated graphs to this HOST');
+    _log('# Retrieve associated graphs to this HOST and the TRIGGER ITEMS');
+
+    $searchItems = array();
+
+    foreach($thisTrigger['result'][0]['functions'] as $aFunction)
+    {
+        $searchItems[] = $aFunction['itemid'];
+    }
 
     $keyName = $thisItem['result'][0]['key_'];
     $hostId = $thisItem['result'][0]['hostid'];
@@ -620,6 +627,7 @@
     $request = array('jsonrpc'=>'2.0',
                      'method'=>'graph.get',
                      'params'=>array('hostids'=>$hostId,
+                                     'itemids'=>$searchItems,
                                      'expandName'=>1,
                                      'selectGraphItems'=>'extend',
                                      'output'=>'extend'),
@@ -631,6 +639,8 @@
 
     if ($forceGraph>0)
     {
+        _log('# Retrieving FORCED graph information');
+
         // --- GET GRAPH ASSOCIATED WITH FORCEGRAPH ---
 
         $request = array('jsonrpc'=>'2.0',
@@ -643,12 +653,12 @@
 
         $forceGraphInfo = postJSON($z_url_api,$request);
         _log('> Forced graph data'.$cCRLF.json_encode($forceGraphInfo,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
-    }
 
-    if (!isset($forceGraphInfo['result'][0]))
-    {
-        _log('! No data received for graph #'.$forceGraph.'; discarding forced graph information');
-        $forceGraph = 0;
+        if (!isset($forceGraphInfo['result'][0]))
+        {
+            _log('! No data received for graph #'.$forceGraph.'; discarding forced graph information');
+            $forceGraph = 0;
+        }
     }
 
     // --- FIND MATCHING GRAPH ITEMS WITH OUR TRIGGER ITEMS ---
@@ -656,6 +666,7 @@
     _log('# Matching retreived graph information with our trigger items');
 
     // Look for graphs across all functions inside the item
+
     $itemIds = array();
 
     foreach($thisTrigger['result'][0]['functions'] as $aFunction)
