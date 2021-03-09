@@ -1,4 +1,4 @@
-# mailGraph (v1.20)
+# mailGraph (v1.21)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
@@ -93,6 +93,11 @@ Each Trigger can have it's own specific settings which can configured through Ta
 **"mailGraph.graphHeight"** to set a specific graph height for this particular Trigger.
 
 **"mailGraph.graphWidth"** to set a specific graph width for this particular Trigger.
+
+# Updating to a newer version of MailGraph
+If a new version comes around:
+- Always copy the 'mailGraph.php' code (overwrite the existing version)
+- Look for changes in the .xml file (especially if the Javascript code has changed)
 
 # What if there is no graph added to the e-mail?
 There is no immediate relationship between a trigger and a graph. This is why the script uses the following technique to find graphs to are associated to the trigger:
