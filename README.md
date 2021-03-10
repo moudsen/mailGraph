@@ -1,4 +1,4 @@
-# mailGraph (v1.21)
+# mailGraph (v1.22)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 [![](images/Example-mail-message.png?raw=true)](images/Example-mail-message.png)
@@ -48,8 +48,9 @@ This code has been tested with the following software versions:
 # Configuration
 - Goto your /config directory
 - Two ways to configure the config.json file: 1) with config.php or 2) with your favorite text editor (note that you must have knowledge of JSON format to use the latter option)'
-- List the available configuration options with "php config.php config.json list"
-- Change any option with "php config.php config.json replace 'key_name' 'new_value'" (note the usage of the single quotes from the command-line!)
+- List the configuration options with "php config.php config.json list"
+- Change any option with "php config.php config.json replace 'key_name' 'new_value'" (note the usage of the single quotes!)
+- Add options with "php config.php add 'key_name' 'new_value'" (note the usage of the single quotes!)
 
 **"script_baseurl"** should point to the URL of your directory where MailGraph is installed (ie. "https://mydomain.com/"). Note the ending '/'!
 
@@ -60,6 +61,14 @@ This code has been tested with the following software versions:
 **"mail_from"** must be a valid e-mail address which represents the 'from' address in the mails that are sent (ie. "zabbix.mailgraph.noreply@domain.com") that is acceptable by your mail server.
 
 **"period"** must be a valid Zabbix period (like "1d", "1w" or "48h") that will be applied to the graph. Default is "48h" when not specified.
+
+**"period_header"** is the header displayed above the graph. For example "Last 48 hours". Defaults to 'period' when not specified.
+
+**"graph_match"** is the matching method while searching for graphs ('exact','none').
+
+**"smtp_server"** and **"smtp_port"** to define the SMTP server and port to be used.
+
+**"smtp_transport"** and **"smtp_strict"** to define the SMTP transport methode ('none','tls','ssl') and whether certificate checking is strict.
 
 # Load the Media Type "MailGraph" into Zabbix
 - Login to your Zabbix instance
@@ -84,7 +93,13 @@ At this point the Media type is ready for configuration under "actions" as per t
 # Trigger tags
 Each Trigger can have it's own specific settings which can configured through Tags:
 
-**"mailGraph.period"** to set a specific graph period for this particular Trigger.
+**"mailGraph.period"** to set a specific graph period for this particular Trigger like "4h" for 4 hours (Zabbix format).
+
+**"mailGraph.period_header"** to set a specific graph period header for this particular Trigger like "Last 4 hours".
+
+**"mailGraph.periods"** to set a specific set of graph periods for this particular Trigger like "10m,4h,12h,7d" (maximum of 4 allowed).
+
+**"mailGraph.periods_headers"** to set a specific set of graph period headers for this particular Trigger like "Last 10 minutes,Last 4 hours,Last 12 hours,Last 7 days".
 
 **"mailGraph.graph"** to set a specific graph to be embedded for this particular Trigger.
 
@@ -94,10 +109,13 @@ Each Trigger can have it's own specific settings which can configured through Ta
 
 **"mailGraph.graphWidth"** to set a specific graph width for this particular Trigger.
 
+**"mailGraph.debug"** to enable the attachment of the log file of MailGraph processing for this particular Trigger to each mail message.
+
 # Updating to a newer version of MailGraph
 If a new version comes around:
 - Always copy the 'mailGraph.php' code (overwrite the existing version)
-- Look for changes in the .xml file (especially if the Javascript code has changed)
+- Look for changes in the .xml file (especially if the Javascript code has changed). If unsure, copy at least the Javascript!
+- (Optional) Look for new configuration options
 
 # What if there is no graph added to the e-mail?
 There is no immediate relationship between a trigger and a graph. This is why the script uses the following technique to find graphs to are associated to the trigger:
