@@ -64,7 +64,7 @@ This code has been tested with the following software versions:
 
 **"period_header"** is the header displayed above the graph. For example "Last 48 hours". Defaults to 'period' when not specified.
 
-**"graph_match"** is the matching method while searching for graphs ('exact','none').
+**"graph_match"** is the matching method while searching for graphs ('Exact','Other').
 
 **"smtp_server"** and **"smtp_port"** to define the SMTP server and port to be used.
 
@@ -183,9 +183,9 @@ Values available:
 
 {{ GRAPH_NAME }} - name of this graph
 
-{{ GRAPH_URL }} - URL to this graph (assuming script produces to an accessible location)
+{{ GRAPH_URLx }} - URL to the graph(s) (assuming script produces to an accessible location for plain mails). "x" can be 1-4.
 
-{{ GRAPH_CID }} - IMG embed string (<img src="{{ GRAPH_CID }}" />)
+{{ GRAPH_CIDx }} - IMG embed string (<img src="{{ GRAPH_CID1 }}" />). "x" can be 1-4.
 
 {{ GRAPH_MATCH }} - Whether the located graph directly relates to the main trigger item or not ('Exact','Other')
 
