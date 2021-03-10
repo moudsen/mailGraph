@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2021-03-05T10:51:39Z</date>
+    <date>2021-03-10T18:50:24Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
@@ -36,12 +36,16 @@
                     <value/>
                 </parameter>
                 <parameter>
-                    <name>infoGiveMeAName</name>
-                    <value>A generic value you want to pass to MailGraph</value>
-                </parameter>
-                <parameter>
                     <name>itemId</name>
                     <value>{ITEM.ID}</value>
+                </parameter>
+                <parameter>
+                    <name>periods</name>
+                    <value>10m,4h,1d,7d</value>
+                </parameter>
+                <parameter>
+                    <name>periods_headers</name>
+                    <value>Last 10 minutes,Last 4 hours,Last day,Last 7 days</value>
                 </parameter>
                 <parameter>
                     <name>recipient</name>
@@ -92,6 +96,9 @@
     if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }&#13;
     if (typeof params.subject === 'string') { fields.subject = params.subject; }&#13;
     if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }&#13;
+    if (typeof params.periods === 'string') { fields.periods = params.periods; }&#13;
+    if (typeof params.periods_headers === 'string') { fields.periods_headers = params.periods_headers; }&#13;
+    if (typeof params.debug === 'string') { fields.debug = params.debug; }&#13;
 &#13;
     // Add generic fields&#13;
     Object.keys(params).forEach(function(key) {&#13;

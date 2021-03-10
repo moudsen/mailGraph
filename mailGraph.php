@@ -27,6 +27,7 @@
     // 1.20 2021/03/07 - Mark Oudsen - Production level version - leaving BETA from here on ...
     // 1.21 2021/03/09 - Mark Oudsen - Reverted graph.get code back to original code as it was not a bug but
     //                                 a wrongly typed requested (should be ARRAY, not comma separated)!
+    // 1.22 2021/03/10 - Mark Oudsen - Added ability to embed multiple periods (1-4) of the same graph
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -41,7 +42,7 @@
     // MAIN SEQUENCE
     // -------------
     // 1) Fetch trigger, item, host, graph, event information via Zabbix API via CURL
-    // 2) Fetch Graph associated to the item/trigger (if any) via Zabbix URL login via CURL
+    // 2) Fetch Graph(s) associated to the item/trigger (if any) via Zabbix URL login via CURL
     // 3) Build and send mail message from template using Swift/TWIG
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -49,7 +50,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.21';
+    $cVersion = 'v1.22';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -156,7 +157,7 @@
 
         // Cookie and image names
         $filename_cookie = $z_tmp_cookies ."zabbix_cookie_" .$graphid . "." .$thisTime. ".txt";
-        $filename = "zabbix_graph_" .$graphid . "." . $thisTime . ".png";
+        $filename = "zabbix_graph_" .$graphid . "." . $thisTime . "-" . $period . ".png";
         $image_name = $z_images_path . $filename;
 
         // Configure CURL
@@ -333,6 +334,7 @@
 
             // Assumes that config.json file has the correct information
 
+            // MANDATORY
             $problemData['itemId'] = $config['cli_itemId'];
             $problemData['triggerId'] = $config['cli_triggerId'];
             $problemData['eventId'] = $config['cli_eventId'];
@@ -343,12 +345,18 @@
             $problemData['subject'] = $config['cli_subject'];
             $problemData['period'] = $config['cli_period'];
 
+            // OPTIONAL
+            if (isset($config['cli_period_header'])) { $problemData['period_header'] = $config['cli_period_header']; }
+            if (isset($config['cli_periods'])) { $problemData['periods'] = $config['cli_periods']; }
+            if (isset($config['cli_periods_headers'])) { $problemData['periods_headers'] = $config['cli_periods_headers']; }
+            if (isset($config['cli_debug'])) { $problemData['debug'] = $config['cli_debug']; }
+
             // Switch on CLI log display
             $showLog = TRUE;
         }
     }
 
-    _log('# Data passed from Zabbix'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+    _log('# Data passed to MailGraph main routine and used for processing'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- CHECK AND SET P_ VARIABLES ---
     // FROM POST OR CLI DATA
@@ -516,8 +524,23 @@
         switch ($aTag['tag'])
         {
             case 'mailGraph.period':
-                $p_period = $aTag['value'];
-                _log('+ Graph display period override = '.$p_period);
+                $problemData['period'] = $aTag['value'];
+                _log('+ Graph display period override = '.$problemData['period']);
+                break;
+
+            case 'mailGraph.period_header':
+                $problemData['period_header'] = $aTag['value'];
+                _log('+ Graph display period header override = '.$problemData['period_header']);
+                break;
+
+            case 'mailGraph.periods':
+                $problemData['periods'] = $aTag['value'];
+                _log('+ Graph display periods override = '.$problemData['periods']);
+                break;
+
+            case 'mailGraph.periods_headers':
+                $problemData['periods_headers'] = $aTag['value'];
+                _log('+ Graph display periods headers override = '.$problemData['periods_headers']);
                 break;
 
             case 'mailGraph.graph':
@@ -538,6 +561,11 @@
             case 'mailGraph.graphHeight':
                 $p_graphHeight = intval($aTag['value']);
                 _log('+ Graph height override = '.$$p_graphHeight);
+                break;
+
+            case 'mailGraph.debug':
+                $problemData['debug'] = 1;
+                _log('+ Mail debug log enabled');
                 break;
         }
     }
@@ -749,7 +777,49 @@
     // Fetch Graph //////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    $graphFile = '';
+    // Determine number of periods for this graph
+
+    $p_periods = array();
+    $p_periods_headers = array();
+
+    if (isset($problemData['periods']))
+    {
+        // Multiple periods mode selected
+
+        _log('# Multi period graph mode selected');
+
+        $p_periods = explode(',',$problemData['periods']);
+
+        // If invalid, replace with single graph item
+        if (sizeof($p_periods)==0) { $p_periods[] = $p_period; }
+
+        // --- Determine headers
+
+        if (isset($problemData['periods_headers'])) { $p_periods_headers = explode(',',$problemData['periods_headers']); }
+
+        // If no headers specified, simply copy the period information
+        if (sizeof($p_periods_headers)==0) { $p_periods_headers = $p_periods; }
+    }
+    else
+    {
+        // Single period mode selected
+
+        $p_periods[] = $p_period;
+
+        if (isset($problemData['period_header']))
+        {
+            $p_periods_headers[] = $problemData['period_header'];
+        }
+        else
+        {
+            $p_periods_headers[] = $p_period;
+        }
+    }
+
+    while (sizeof($p_periods)>4) { array_pop($p_periods); }
+    while (sizeof($p_periods_headers)>4) { array_pop($p_periods_headers); }
+
+    $graphFiles = array();
     $graphURL = '';
 
     // If we have any matching graph, make the embedding information available
@@ -784,14 +854,19 @@
 
         _log('# Adding '.strtoupper($theType).' graph #'.$mailData['GRAPH_ID']);
 
-        $graphFile = GraphImageById($mailData['GRAPH_ID'],
-                                    $p_graphWidth,$p_graphHeight,
-                                    $theGraph['graphtype'],
-                                    $p_showLegend,$p_period);
+        foreach($p_periods as $aKey=>$aPeriod)
+        {
+            $graphFile = GraphImageById($mailData['GRAPH_ID'],
+                                        $p_graphWidth,$p_graphHeight,
+                                        $theGraph['graphtype'],
+                                        $p_showLegend,$aPeriod);
 
-        _log('> Filename = '.$graphFile);
+            $graphFiles[] = $graphFile;
 
-        $mailData['GRAPH_URL'] = $z_url_image . $graphFile;
+            $mailData['GRAPH_URL'.($aKey+1)] = $z_url_image . $graphFile;
+            $mailData['GRAPH_HEADER'.($aKey+1)] = $p_periods_headers[$aKey];
+        }
+
         $mailData['GRAPH_ZABBIXLINK'] = $z_server.'graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
     }
 
@@ -889,11 +964,17 @@
 
     $twig = new \Twig\Environment($loader);
 
-    if ($graphFile!='')
+    if (sizeof($graphFiles)>0)
     {
-        // Embed the image
-        $mailData['GRAPH_CID'] = $message->embed(Swift_Image::fromPath($z_images_path.$graphFile));
-        _log('> Embedded graph image '.$z_images_path.$graphFile);
+        // Embed the image(s)
+
+        $graphReference = 1;
+
+        foreach($graphFiles as $graphFile)
+        {
+            $mailData['GRAPH_CID'.$graphReference++] = $message->embed(Swift_Image::fromPath($z_images_path.$graphFile));
+            _log('> Embedded graph image '.$z_images_path.$graphFile);
+        }
     }
 
     $bodyHTML = $twig->render('html', $mailData);
@@ -908,7 +989,7 @@
             ->setBody($bodyHTML, 'text/html')
             ->addPart($bodyPlain, 'text/plain');
 
-    if ($cDebugMail)
+    if (($cDebugMail) || (isset($problemData['debug'])))
     {
         _log('# Attaching logs to mail message');
 
@@ -923,14 +1004,14 @@
 
     $result = $mailer->send($message);
 
-    // Return TAG information
+    // Return Event TAG information for Zabbix
 
     $response = array('messageId.mailGraph'=>$messageId);
     echo json_encode($response).$cCRLF;
 
     // Store log?
 
-    if ($cDebug)
+    if (($cDebug) || (isset($problemData['debug'])))
     {
         unset($mailData['LOG_HTML']);
         unset($mailData['LOG_PLAIN']);

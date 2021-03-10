@@ -8,8 +8,8 @@
     "cli_recipient": "recipient@domain.com",
     "cli_subject": "[TEST] {{ HOST_NAME|raw }}:  ({{ EVENT_SEVERITY }}) {{ EVENT_NAME|raw }}",
     "cli_baseURL": "https:\/\/domain.com\/zabbix\/",
-    "cli_period": "30m",
-    "cli_period_header": "Last 30 minutes",
+    "cli_periods": "10m,4h,2d,7d",
+    "cli_periods_headers": "Last 10 minutes,Last 4 hours,Last 2 days,Last 7 days",
     "cli_debug": 1,
     "zabbix_user": "alogicalusername",
     "zabbix_user_pwd": "astrongpassword",
@@ -22,7 +22,7 @@
     "smtp_transport": "none",
     "smtp_strict": "yes",
     "graph_match": "any",
-    "period": "20m",
-    "period_header": "Last 20 minutes",
+    "periods": "10m,4h,2d,7d",
+    "periods_headers": "Last 10 minutes,Last 4 hours,Last 2 days,Last 7 days",
     "debug": 0
 }

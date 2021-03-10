@@ -26,6 +26,9 @@ try {
     if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }
     if (typeof params.subject === 'string') { fields.subject = params.subject; }
     if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }
+    if (typeof params.periods === 'string') { fields.periods = params.periods; }
+    if (typeof params.periods_headers === 'string') { fields.periods_headers = params.periods_headers; }
+    if (typeof params.debug === 'string') { fields.debug = params.debug; }
 
     // Add generic fields
     Object.keys(params).forEach(function(key) {

@@ -3,10 +3,10 @@ EVENT INFORMATION #{{ EVENT_ID }}
 Severity:    {{ EVENT_SEVERITY }}
 Description: {{ EVENT_NAME }}
 
-{% if GRAPH_CID|length > 0 %}
-GRAPH #{{ GRAPH_ID }}
-{{ GRAPH_URL }}
-This graph will remain available for approx. the next 2 weeks only; use HTML reader after this period to view the graph.
+{% if GRAPH_CID1|length > 0 %}
+GRAPH #{{ GRAPH_ID1 }}
+{{ GRAPH_URL1 }}
+This graph will remain available for approx. the next 2 weeks only; use HTML reader after this period to view the graph that is embedded in the attached HTML version.
 {% endif %}
 
 TRIGGER #{{ TRIGGER_ID }}

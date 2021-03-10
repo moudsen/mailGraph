@@ -43,6 +43,12 @@
         text-decoration: none;
         color: #010059;
     }
+    hr {
+        border: none;
+        height: 1px;
+        color: #333; /* old IE */
+        background-color: #333;
+    }
     .MsgBody {
         width: 100%;
     }
@@ -66,6 +72,10 @@
     }
     .header {
         font-size: 16px;
+        font-weight: bold;
+    }
+    .graphHeader {
+        font-size: 14px;
         font-weight: bold;
     }
     .content {
@@ -104,10 +114,46 @@
                 </table>
             </td>
         </tr>
-{% if GRAPH_CID|length > 0 %}
+{% if GRAPH_CID1|length > 0 %}
         <tr>
             <div align=justify>
-                <td align="center"><img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID }}" /></td>
+                <td align="center">
+                    <span class="graphHeader">{{ GRAPH_HEADER1 }}</span><br/>
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID1 }}" />
+                </td>
+            </div>
+        </tr>
+{% endif %}
+{% if GRAPH_CID2|length > 0 %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <hr/>
+                    <span class="graphHeader">{{ GRAPH_HEADER2 }}</span><br/>
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID2 }}" />
+                </td>
+            </div>
+        </tr>
+{% endif %}
+{% if GRAPH_CID3|length > 0 %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <hr/>
+                    <span class="graphHeader">{{ GRAPH_HEADER3 }}</span><br/>
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID3 }}" />
+                </td>
+            </div>
+        </tr>
+{% endif %}
+{% if GRAPH_CID4|length > 0 %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <hr/>
+                    <span class="graphHeader">{{ GRAPH_HEADER4 }}</span><br/>
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID4 }}" />
+                </td>
             </div>
         </tr>
 {% endif %}
