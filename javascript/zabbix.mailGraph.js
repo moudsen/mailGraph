@@ -7,7 +7,10 @@ try {
         result = { tags: {} };
 
     // Set HTTP proxy if required
-    if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') { req.setProxy(params.HTTPProxy); }
+    if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {
+        req.setProxy(params.HTTPProxy);
+        fields.HTTPProxy = params.HTTPProxy;
+    }
 
     // Declare output type
     req.AddHeader('Content-Type: application/json');

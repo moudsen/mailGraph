@@ -11,6 +11,7 @@
     "cli_periods": "10m,4h,2d,7d",
     "cli_periods_headers": "Last 10 minutes,Last 4 hours,Last 2 days,Last 7 days",
     "cli_debug": 1,
+    "cli_proxy": "",
     "zabbix_user": "alogicalusername",
     "zabbix_user_pwd": "astrongpassword",
     "zabbix_api_user": "alogicalusername",

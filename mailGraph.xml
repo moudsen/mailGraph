@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2021-03-10T18:50:24Z</date>
+    <date>2021-03-12T15:29:06Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
@@ -77,7 +77,10 @@
         result = { tags: {} };&#13;
 &#13;
     // Set HTTP proxy if required&#13;
-    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') { req.setProxy(params.HTTPProxy); }&#13;
+    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') {&#13;
+        req.setProxy(params.HTTPProxy);&#13;
+        fields.HTTPProxy = params.HTTPProxy;&#13;
+    }&#13;
 &#13;
     // Declare output type&#13;
     req.AddHeader('Content-Type: application/json');&#13;
