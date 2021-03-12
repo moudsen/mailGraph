@@ -153,13 +153,15 @@
         {
            // 0: Normal
            // 1: Stacked
-           case 0,1:
+           case 0:
+           case 1:
                 $z_url_graph   = $z_server ."chart2.php";
                 break;
 
            // 2: Pie
            // 3: Exploded
-           case 2,3:
+           case 2:
+           case 3:
                 $z_url_graph   = $z_server ."chart6.php";
                 break;
         }
