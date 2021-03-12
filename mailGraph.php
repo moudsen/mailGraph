@@ -29,6 +29,7 @@
     //                                 a wrongly typed requested (should be ARRAY, not comma separated)!
     // 1.22 2021/03/10 - Mark Oudsen - Added ability to embed multiple periods (1-4) of the same graph
     // 1.23 2021/03/12 - Mark Oudsen - Added graph support for 'Stacked', 'Pie' and 'Exploded'
+    // 1.24 2021/03/12 - Mark Oudsen - Added support for HTTP proxy
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -51,7 +52,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.23';
+    $cVersion = 'v1.24';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -82,6 +83,7 @@
         global $cCRLF;
         global $cVersion;
         global $cDebug;
+        global $HTTPProxy;
 
         // Initialize Curl instance
         _log('% postJSON: '.$url);
@@ -91,6 +93,12 @@
 
         // Set options
         curl_setopt($ch, CURLOPT_USERAGENT, 'Zabbix-mailGraph - '.$cVersion);
+
+        if ((isset($HTTPProxy)) && ($HTTPProxy!=''))
+        {
+            _log('% Using proxy: '.$HTTPProxy);
+            curl_setopt($ch, CURLOPT_PROXY, $HTTPProxy);
+        }
 
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
@@ -142,6 +150,7 @@
         global $z_url_api;
         global $cVersion;
         global $cCRLF;
+        global $HTTPProxy;
 
         // Unique names
         $thisTime = time();
@@ -164,6 +173,11 @@
            case 3:
                 $z_url_graph   = $z_server ."chart6.php";
                 break;
+
+           default:
+                // Catch all ...
+                _log('% Graph type #'.$graphType.' unknown; forcing "Normal"');
+                $z_url_graph   = $z_server ."chart2.php";
         }
 
         $z_url_fetch   = $z_url_graph ."?graphid=" .$graphid ."&width=" .$width ."&height=" .$height .
@@ -185,6 +199,12 @@
         curl_setopt($ch, CURLOPT_URL, $z_url_index);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Zabbix-mailGraph - '.$cVersion);
+
+        if ((isset($HTTPProxy)) && ($HTTPProxy!=''))
+        {
+            _log('% Using proxy: '.$HTTPProxy);
+            curl_setopt($ch, CURLOPT_PROXY, $HTTPProxy);
+        }
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
@@ -286,45 +306,6 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Create easy to read duration
-
-    function getNiceDuration($durationInSeconds)
-    {
-        $duration = '';
-
-        $days = floor($durationInSeconds / 86400);
-        $durationInSeconds -= $days * 86400;
-        $hours = floor($durationInSeconds / 3600);
-        $durationInSeconds -= $hours * 3600;
-        $minutes = floor($durationInSeconds / 60);
-        $seconds = $durationInSeconds - $minutes * 60;
-
-        if ($days>0)
-        {
-            $duration .= $days . ' day';
-            if ($days!=1) { $duration .= 's'; }
-        }
-
-        if ($hours>0)
-        {
-            $duration .= ' ' . $hours . ' hr';
-            if ($hours!=1) { $duration .= 's'; }
-        }
-
-        if ($minutes>0)
-        {
-            $duration .= ' ' . $minutes . ' min';
-            if ($minutes!=1) { $duration .= 's'; }
-        }
-
-        if ($seconds>=0) { $duration .= ' ' . $seconds . ' sec'; }
-        if ($seconds!=1) { $duration .= 's'; }
-
-        return $duration;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -342,6 +323,8 @@
     $problemData = json_decode($problemJSON,TRUE);
 
     // --- CLI DATA ---
+
+    $HTTPProxy = '';
 
     // Facilitate CLI based testing
     if (isset($argc))
@@ -368,6 +351,7 @@
             if (isset($config['cli_periods'])) { $problemData['periods'] = $config['cli_periods']; }
             if (isset($config['cli_periods_headers'])) { $problemData['periods_headers'] = $config['cli_periods_headers']; }
             if (isset($config['cli_debug'])) { $problemData['debug'] = $config['cli_debug']; }
+            if (isset($config['cli_proxy'])) { $problemData['HTTPProxy'] = $config['cli_proxy']; }
 
             // Switch on CLI log display
             $showLog = TRUE;
@@ -414,6 +398,8 @@
 
     $p_period = '48h';
     if (isset($problemData['period'])) { $p_period = $problemData['period']; }
+
+    if (isset($problemData['HTTPProxy'])) { $HTTPProxy = $problemData['HTTPPRoxy']; }
 
     // DYNAMIC VARIABLES FROM ZABBIX
 
