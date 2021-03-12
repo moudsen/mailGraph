@@ -28,6 +28,7 @@
     // 1.21 2021/03/09 - Mark Oudsen - Reverted graph.get code back to original code as it was not a bug but
     //                                 a wrongly typed requested (should be ARRAY, not comma separated)!
     // 1.22 2021/03/10 - Mark Oudsen - Added ability to embed multiple periods (1-4) of the same graph
+    // 1.23 2021/03/12 - Mark Oudsen - Added graph support for 'Stacked', 'Pie' and 'Exploded'
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -50,7 +51,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.22';
+    $cVersion = 'v1.23';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
@@ -147,7 +148,22 @@
 
         // Relative web calls
         $z_url_index   = $z_server ."index.php";
-        $z_url_graph   = $z_server ."chart2.php";
+
+        switch($graphType)
+        {
+           // 0: Normal
+           // 1: Stacked
+           case 0,1:
+                $z_url_graph   = $z_server ."chart2.php";
+                break;
+
+           // 2: Pie
+           // 3: Exploded
+           case 2,3:
+                $z_url_graph   = $z_server ."chart6.php";
+                break;
+        }
+
         $z_url_fetch   = $z_url_graph ."?graphid=" .$graphid ."&width=" .$width ."&height=" .$height .
                                        "&graphtype=".$graphType."&legend=".$showLegend."&profileIdx=web.graphs.filter".
                                        "&from=now-".$period."&to=now";
