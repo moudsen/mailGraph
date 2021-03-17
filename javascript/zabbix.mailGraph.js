@@ -17,9 +17,7 @@ try {
 
     // Must have fields
     fields.itemId = params.itemId;
-    fields.triggerId = params.triggerId;
     fields.eventId = params.eventId;
-    fields.eventValue = params.eventValue;
     fields.recipient = params.recipient;
     fields.baseURL = params.baseURL;
     fields.duration = params.duration;

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.0</version>
-    <date>2021-03-12T15:29:06Z</date>
+    <date>2021-03-17T12:55:43Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
@@ -20,10 +20,6 @@
                     <value>{EVENT.ID}</value>
                 </parameter>
                 <parameter>
-                    <name>eventValue</name>
-                    <value>{EVENT.VALUE}</value>
-                </parameter>
-                <parameter>
                     <name>graphHeight</name>
                     <value>120</value>
                 </parameter>
@@ -34,6 +30,10 @@
                 <parameter>
                     <name>HTTPProxy</name>
                     <value/>
+                </parameter>
+                <parameter>
+                    <name>infoTest</name>
+                    <value>Test</value>
                 </parameter>
                 <parameter>
                     <name>itemId</name>
@@ -60,10 +60,6 @@
                     <value>{{ HOST_NAME|raw }}: ({{ EVENT_SEVERITY }}) {{ EVENT_NAME|raw }}</value>
                 </parameter>
                 <parameter>
-                    <name>triggerId</name>
-                    <value>{TRIGGER.ID}</value>
-                </parameter>
-                <parameter>
                     <name>URL</name>
                     <value>https://mydomain.com/mailGraph.php</value>
                 </parameter>
@@ -87,9 +83,7 @@
 &#13;
     // Must have fields&#13;
     fields.itemId = params.itemId;&#13;
-    fields.triggerId = params.triggerId;&#13;
     fields.eventId = params.eventId;&#13;
-    fields.eventValue = params.eventValue;&#13;
     fields.recipient = params.recipient;&#13;
     fields.baseURL = params.baseURL;&#13;
     fields.duration = params.duration;&#13;
@@ -138,6 +132,8 @@ Customization:&#13;
 - &quot;graphWidth&quot; and &quot;graphWidth&quot; can be defined for the image size&#13;
 - &quot;showLegend&quot; can be defined to show or hide the legend of the graph&#13;
 - &quot;subject&quot; can be defined for a customized subject for the mail message&#13;
+- &quot;periods&quot; and &quot;periods_headers&quot; can be defined for displaying multiple periods of the same graph, or&#13;
+- &quot;period&quot; and &quot;period_header&quot; can be defined to display a single graph&#13;
 &#13;
 The html.template and plain.template files can be adjusted (TWIG format).&#13;
 &#13;
