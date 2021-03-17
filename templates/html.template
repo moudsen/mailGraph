@@ -114,49 +114,16 @@
                 </table>
             </td>
         </tr>
-{% if GRAPH_CID1|length > 0 %}
+{% for aGraph in GRAPHS %}
         <tr>
             <div align=justify>
                 <td align="center">
-                    <span class="graphHeader">{{ GRAPH_HEADER1 }}</span><br/>
-                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID1 }}" />
+                    <span class="graphHeader">{{ aGraph.HEADER }}</span><br/>
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ aGraph.CID }}" />
                 </td>
             </div>
         </tr>
-{% endif %}
-{% if GRAPH_CID2|length > 0 %}
-        <tr>
-            <div align=justify>
-                <td align="center">
-                    <hr/>
-                    <span class="graphHeader">{{ GRAPH_HEADER2 }}</span><br/>
-                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID2 }}" />
-                </td>
-            </div>
-        </tr>
-{% endif %}
-{% if GRAPH_CID3|length > 0 %}
-        <tr>
-            <div align=justify>
-                <td align="center">
-                    <hr/>
-                    <span class="graphHeader">{{ GRAPH_HEADER3 }}</span><br/>
-                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID3 }}" />
-                </td>
-            </div>
-        </tr>
-{% endif %}
-{% if GRAPH_CID4|length > 0 %}
-        <tr>
-            <div align=justify>
-                <td align="center">
-                    <hr/>
-                    <span class="graphHeader">{{ GRAPH_HEADER4 }}</span><br/>
-                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ GRAPH_CID4 }}" />
-                </td>
-            </div>
-        </tr>
-{% endif %}
+{% endfor %}
         <tr>
             <td class="links">
                 <div align=center>

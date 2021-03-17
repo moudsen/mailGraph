@@ -30,6 +30,7 @@
     // 1.22 2021/03/10 - Mark Oudsen - Added ability to embed multiple periods (1-4) of the same graph
     // 1.23 2021/03/12 - Mark Oudsen - Added graph support for 'Stacked', 'Pie' and 'Exploded'
     // 1.24 2021/03/12 - Mark Oudsen - Added support for HTTP proxy
+    // 1.25 2021/03/16 - Mark Oudsen - Refactoring for optimized flow and relevant data retrieval
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -337,16 +338,14 @@
 
             // MANDATORY
             $problemData['itemId'] = $config['cli_itemId'];
-            $problemData['triggerId'] = $config['cli_triggerId'];
             $problemData['eventId'] = $config['cli_eventId'];
-            $problemData['eventValue'] = $config['cli_eventValue'];
             $problemData['recipient'] = $config['cli_recipient'];
             $problemData['baseURL'] = $config['cli_baseURL'];
             $problemData['duration'] = $config['cli_duration'];
-            $problemData['subject'] = $config['cli_subject'];
-            $problemData['period'] = $config['cli_period'];
 
             // OPTIONAL
+            if (isset($config['cli_subject'])) { $problemData['subject'] = $config['cli_subject']; }
+            if (isset($config['cli_period'])) { $problemData['period'] = $config['cli_period']; }
             if (isset($config['cli_period_header'])) { $problemData['period_header'] = $config['cli_period_header']; }
             if (isset($config['cli_periods'])) { $problemData['periods'] = $config['cli_periods']; }
             if (isset($config['cli_periods_headers'])) { $problemData['periods_headers'] = $config['cli_periods_headers']; }
@@ -366,17 +365,11 @@
     if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
     $p_itemId = intval($problemData['itemId']);
 
-    if (!isset($problemData['triggerId'])) { echo "Missing TRIGGER ID?\n"; die; }
-    $p_triggerId = intval($problemData['triggerId']);
-
     if (!isset($problemData['eventId'])) { echo "Missing EVENT ID?\n"; die; }
     $p_eventId = intval($problemData['eventId']);
 
     if (!isset($problemData['recipient'])) { echo "Missing RECIPIENT?\n"; die; }
     $p_recipient = $problemData['recipient'];
-
-    if (!isset($problemData['eventValue'])) { echo "Missing EVENTVALUE?\n"; die; }
-    $p_eventValue = intval($problemData['eventValue']);
 
     if (!isset($problemData['duration'])) { echo "Missing DURATION?\n"; die; }
     $p_duration = intval($problemData['duration']);
@@ -474,7 +467,9 @@
     $mailData['BASE_URL'] = $p_URL;
     $mailData['SUBJECT'] = $p_subject;
 
+    // -------------
     // --- LOGIN ---
+    // -------------
 
     _log('# LOGIN to Zabbix');
 
@@ -494,7 +489,51 @@
 
     _log('> Token = '.$token);
 
+    // ------------------------------
+    // --- READ EVENT INFORMATION ---
+    // ------------------------------
+
+    _log('# Retreiving EVENT information');
+
+    $request = array('jsonrpc'=>'2.0',
+                     'method'=>'event.get',
+                     'params'=>array('eventids'=>$p_eventId,
+                                     'output'=>'extend',
+                                     'selectRelatedObject'=>'extend',
+                                     'selectSuppressionData'=>'extend'),
+                     'auth'=>$token,
+                     'id'=>nextRequestID());
+
+    $thisEvent = postJSON($z_url_api,$request);
+    _log('> Event data'.$cCRLF.json_encode($thisEvent,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+    if (!isset($thisEvent['result'][0])) { echo '! No response data received?'.$cCRLF; die; }
+
+    $mailData['EVENT_ID'] = $thisEvent['result'][0]['eventid'];
+    $mailData['EVENT_NAME'] = $thisEvent['result'][0]['name'];
+    $mailData['EVENT_OPDATA'] = $thisEvent['result'][0]['opdata'];
+    $mailData['EVENT_SUPPRESSED'] = $thisEvent['result'][0]['suppressed'];
+    $mailData['EVENT_VALUE'] = $thisEvent['result'][0]['value'];
+
+    switch($mailData['EVENT_VALUE'])
+    {
+        case 0: // Recovering
+                $mailData['EVENT_SEVERITY'] = 'Resolved';
+                $mailData['EVENT_STATUS'] = 'Recovered';
+                break;
+
+        case 1: // Triggered/Active
+                $_severity = array('Not classified','Information','Warning','Average','High','Disaster');
+                $mailData['EVENT_SEVERITY'] = $_severity[$thisEvent['result'][0]['severity']];
+                $mailData['EVENT_STATUS'] = 'Triggered/Active';
+                break;
+    }
+
+    $p_triggerId = $thisEvent['result'][0]['relatedObject']['triggerid'];
+
+    // ------------------------
     // --- GET TRIGGER INFO ---
+    // ------------------------
 
     _log('# Retrieve TRIGGER information');
 
@@ -574,15 +613,15 @@
         }
     }
 
+    // ---------------------
     // --- GET ITEM INFO ---
+    // ---------------------
 
     _log('# Retrieve ITEM information');
 
-    $itemId = $thisTrigger['result'][0]['functions'][0]['itemid'];
-
     $request = array('jsonrpc'=>'2.0',
                      'method'=>'item.get',
-                     'params'=>array('itemids'=>$itemId,
+                     'params'=>array('itemids'=>$p_itemId,
                      'output'=>'extend'),
                      'auth'=>$token,
                      'id'=>nextRequestID());
@@ -607,7 +646,9 @@
     if (strlen($mailData['ITEM_LASTVALUE'])>50) { $mailData['ITEM_LASTVALUE'] = substr($mailData['ITEM_LASTVALUE'],0,50).' ...'; }
     if (strlen($mailData['ITEM_PREVIOUSVALUE'])>50) { $mailData['ITEM_PREVIOUSVALUE'] = substr($mailData['ITEM_PREVIOUSVALUE'],0,50).' ...'; }
 
+    // ---------------------
     // --- GET HOST INFO ---
+    // ---------------------
 
     _log('# Retrieve HOST information');
 
@@ -642,7 +683,9 @@
     $thisMacros = postJSON($z_url_api,$request);
     _log('> Host macro data'.$cCRLF.json_encode($thisMacros,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
+    // --------------------------------------------
     // --- GET GRAPHS ASSOCIATED WITH THIS HOST ---
+    // --------------------------------------------
 
     _log('# Retrieve associated graphs to this HOST and the TRIGGER ITEMS');
 
@@ -671,9 +714,11 @@
 
     if ($forceGraph>0)
     {
-        _log('# Retrieving FORCED graph information');
-
+        // --------------------------------------------
         // --- GET GRAPH ASSOCIATED WITH FORCEGRAPH ---
+        // --------------------------------------------
+
+        _log('# Retrieving FORCED graph information');
 
         $request = array('jsonrpc'=>'2.0',
                          'method'=>'graph.get',
@@ -693,11 +738,13 @@
         }
     }
 
+    // --------------------------------------------------------
     // --- FIND MATCHING GRAPH ITEMS WITH OUR TRIGGER ITEMS ---
+    // --------------------------------------------------------
 
     _log('# Matching retreived graph information with our trigger items');
 
-    // Look for graphs across all functions inside the item
+    // --- Look for graphs across all functions inside the item
 
     $itemIds = array();
 
@@ -724,7 +771,7 @@
             {
                 if ($aGraphItem['itemid']==$anItemId)
                 {
-                    if ($anItemId=$itemId)
+                    if ($anItemId==$itemId)
                     {
                         _log('+ Graph #'.$aGraphItem['graphid'].' full match found (item #'.$aGraphItem['itemid'].')');
                         $matchedGraphs[] = $aGraph;
@@ -740,42 +787,6 @@
     }
 
     _log('> Graphs found (matching/partial) = '.sizeof($matchedGraphs).' / '.sizeof($otherGraphs));
-
-    // --- READ EVENT INFORMATION ---
-
-    _log('# Retreiving EVENT information');
-
-    $request = array('jsonrpc'=>'2.0',
-                     'method'=>'event.get',
-                     'params'=>array('eventids'=>$p_eventId,
-                                     'output'=>'extend'),
-                     'auth'=>$token,
-                     'id'=>nextRequestID());
-
-    $thisEvent = postJSON($z_url_api,$request);
-    _log('> Event data'.$cCRLF.json_encode($thisEvent,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
-
-    if (!isset($thisEvent['result'][0])) { echo '! No response data received?'.$cCRLF; die; }
-
-    $mailData['EVENT_ID'] = $thisEvent['result'][0]['eventid'];
-    $mailData['EVENT_NAME'] = $thisEvent['result'][0]['name'];
-    $mailData['EVENT_OPDATA'] = $thisEvent['result'][0]['opdata'];
-    $mailData['EVENT_VALUE'] = $p_eventValue;
-
-    switch($p_eventValue)
-    {
-        case 0: // Recovering
-                $mailData['EVENT_SEVERITY'] = 'Resolved';
-                break;
-
-        case 1: // Triggered/Active
-                $_severity = array('Not classified','Information','Warning','Average','High','Disaster');
-                $mailData['EVENT_SEVERITY'] = $_severity[$thisEvent['result'][0]['severity']];
-                break;
-    }
-
-    $_status = array('Recovered','Triggered/Active');
-    $mailData['EVENT_STATUS'] = $_status[$p_eventValue];
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Fetch Graph //////////////////////////////////////////////////////////////////////////////////////////
@@ -867,8 +878,8 @@
 
             $graphFiles[] = $graphFile;
 
-            $mailData['GRAPH_URL'.($aKey+1)] = $z_url_image . $graphFile;
-            $mailData['GRAPH_HEADER'.($aKey+1)] = $p_periods_headers[$aKey];
+            $mailData['GRAPHS'][$aKey]['URL'] = $z_url_image . $graphFile;
+            $mailData['GRAPHS'][$aKey]['HEADER'] = $p_periods_headers[$aKey];
         }
 
         $mailData['GRAPH_ZABBIXLINK'] = $z_server.'graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
@@ -972,11 +983,11 @@
     {
         // Embed the image(s)
 
-        $graphReference = 1;
+        $graphReference = 0;
 
         foreach($graphFiles as $graphFile)
         {
-            $mailData['GRAPH_CID'.$graphReference++] = $message->embed(Swift_Image::fromPath($z_images_path.$graphFile));
+            $mailData['GRAPHS'][$graphReference++]['CID'] = $message->embed(Swift_Image::fromPath($z_images_path.$graphFile));
             _log('> Embedded graph image '.$z_images_path.$graphFile);
         }
     }
