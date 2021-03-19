@@ -62,7 +62,7 @@
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = TRUE;          // Extended debug logging mode
+    $cDebug = FALSE;          // Extended debug logging mode
     $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
     $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
