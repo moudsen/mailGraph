@@ -31,6 +31,8 @@
     // 1.23 2021/03/12 - Mark Oudsen - Added graph support for 'Stacked', 'Pie' and 'Exploded'
     // 1.24 2021/03/12 - Mark Oudsen - Added support for HTTP proxy
     // 1.25 2021/03/16 - Mark Oudsen - Refactoring for optimized flow and relevant data retrieval
+    // 1.26 2021/03/19 - Mark Oudsen - Bugfixes after refactor (wrong itemId and incorrect eventValue)
+    //                                 Suppressing Zabbix username-password in log
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -53,14 +55,14 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.24';
+    $cVersion = 'v1.26';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
 
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = FALSE;          // Extended debug logging mode
+    $cDebug = TRUE;          // Extended debug logging mode
     $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
     $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
@@ -88,7 +90,7 @@
 
         // Initialize Curl instance
         _log('% postJSON: '.$url);
-        if ($cDebug) { _log('> POST data'.json_encode($data)); }
+        if ($cDebug) { _log('> POST data: '.json_encode(maskOutputContent($data))); }
 
         $ch = curl_init();
 
@@ -307,6 +309,55 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Check the array for information we do not want to share in any logging
+
+    function maskOutputFields($info)
+    {
+        foreach($info as $aKey=>$aValue)
+        {
+            switch($aKey)
+            {
+                case 'zabbix_user':
+                case 'zabbix_user_pwd':
+                case 'zabbix_api_user':
+                case 'zabbix_api_pwd':
+                    $info[$aKey] = '<masked>';
+                    break;
+            }
+        }
+
+        return($info);
+    }
+
+    // Check the array if it contains information that should not be logged
+
+    function maskOutputContent($info)
+    {
+        global $config;
+
+        foreach($info as $infoKey=>$infoValue)
+        {
+            if (is_array($infoValue)) { $info[$infoKey] = maskOutputContent($infoValue); }
+
+            foreach($config as $aKey=>$aValue)
+            {
+                switch($aKey)
+                {
+                    case 'zabbix_user':
+                    case 'zabbix_user_pwd':
+                    case 'zabbix_api_user':
+                    case 'zabbix_api_pwd':
+                        if ($aValue==$infoValue) { $info[$infoKey] = '<masked>'; };
+                        break;
+                }
+            }
+        }
+
+        return($info);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -315,7 +366,8 @@
     // [CONFIGURE] Change only when you want to place your config file somewhere else ...
     $config = readConfig(getcwd().'/config/config.json');
 
-    _log('# Configuration taken from config.json'.$cCRLF.json_encode($config,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+    _log('# Configuration taken from config.json'.$cCRLF.
+         json_encode(maskOutputFields($config),JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- POST DATA ---
 
@@ -513,7 +565,7 @@
     $mailData['EVENT_NAME'] = $thisEvent['result'][0]['name'];
     $mailData['EVENT_OPDATA'] = $thisEvent['result'][0]['opdata'];
     $mailData['EVENT_SUPPRESSED'] = $thisEvent['result'][0]['suppressed'];
-    $mailData['EVENT_VALUE'] = $thisEvent['result'][0]['value'];
+    $mailData['EVENT_VALUE'] = $thisEvent['result'][0]['relatedObject']['value'];
 
     switch($mailData['EVENT_VALUE'])
     {
@@ -771,7 +823,7 @@
             {
                 if ($aGraphItem['itemid']==$anItemId)
                 {
-                    if ($anItemId==$itemId)
+                    if ($anItemId==$p_itemId)
                     {
                         _log('+ Graph #'.$aGraphItem['graphid'].' full match found (item #'.$aGraphItem['itemid'].')');
                         $matchedGraphs[] = $aGraph;
@@ -1031,7 +1083,7 @@
         unset($mailData['LOG_HTML']);
         unset($mailData['LOG_PLAIN']);
 
-        $content = implode(chr(10),$logging).$cCRLF.$cCRLF.'=== MAILDATA ==='.$cCRLF.$cCRLF.json_encode($mailData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
+        $content = implode(chr(10),$logging).$cCRLF.$cCRLF.'=== VALUES AVAILABLE FOR TWIG TEMPLATE ==='.$cCRLF.$cCRLF.json_encode($mailData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
         $content = str_replace(chr(13),'',$content);
 
         $logName = 'log.'.$p_eventId.'.'.date('YmdHis').'.dump';
