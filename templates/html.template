@@ -114,16 +114,6 @@
                 </table>
             </td>
         </tr>
-{% for aGraph in GRAPHS %}
-        <tr>
-            <div align=justify>
-                <td align="center">
-                    <span class="graphHeader">{{ aGraph.HEADER }}</span><br/>
-                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ aGraph.CID }}" />
-                </td>
-            </div>
-        </tr>
-{% endfor %}
         <tr>
             <td class="links">
                 <div align=center>
@@ -137,6 +127,66 @@
                 </div>
             </td>
         </tr>
+{% for aGraph in GRAPHS_I %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <span class="graphHeader">{{ aGraph.HEADER }}</span><br/>
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ aGraph.CID }}" />
+                </td>
+            </div>
+        </tr>
+{% endfor %}
+{% if TRIGGER_SCREEN > 0 %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <span class="graphHeader">{{ GRAPHS_T_HEADER }} - {{ GRAPHS_T_PERIODHEADER }}</span>
+                </td>
+            </div>
+        </tr>
+        <tr>
+            <td class="links">
+                <div align="center">
+                    Screen ID: <a href="{{ GRAPHS_T_LINK }}">{{ TRIGGER_SCREEN }}</a>
+                </div>
+            </td>
+        </tr>
+    {% for aGraph in GRAPHS_T %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ aGraph.CID }}" />
+                </td>
+            </div>
+        </tr>
+    {% endfor %}
+{% endif %}
+{% if HOST_SCREEN > 0 %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <span class="graphHeader">{{ GRAPHS_H_HEADER }} - {{ GRAPHS_H_PERIODHEADER }}</span>
+                </td>
+            </div>
+        </tr>
+        <tr>
+            <td class="links">
+                <div align="center">
+                    Screen ID: <a href="{{ GRAPHS_H_LINK }}">{{ HOST_SCREEN }}</a>
+                </div>
+            </td>
+        </tr>
+    {% for aGraph in GRAPHS_H %}
+        <tr>
+            <div align=justify>
+                <td align="center">
+                    <img id="mainimage" border=0 style="width: 100%; max-width: 790px" alt="Zabbix Graph" src="{{ aGraph.CID }}" />
+                </td>
+            </div>
+        </tr>
+    {% endfor %}
+{% endif %}
     </table>
 </body>
 </html>

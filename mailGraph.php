@@ -33,6 +33,8 @@
     // 1.25 2021/03/16 - Mark Oudsen - Refactoring for optimized flow and relevant data retrieval
     // 1.26 2021/03/19 - Mark Oudsen - Bugfixes after refactor (wrong itemId and incorrect eventValue)
     //                                 Suppressing Zabbix username-password in log
+    // 1.27 2021/03/19 - Mark Oudsen - Added ability to define "mailGraph.screen" tag to embed graphs from
+    //                                 Added PHP informational and warnings to log for easier debug/spotting
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -55,9 +57,10 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.26';
+    $cVersion = 'v1.27';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
+    $maxGraphs = 4;
 
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
@@ -270,6 +273,22 @@
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Catch PHP warnings/notices/errors
+
+    function catchPHPerrors($errno, $errstr, $errfile, $errline)
+    {
+        // --- Just log ...
+
+        _log('!! ('.$errno.') "'.$errstr.'" at line #'.$errline.' of "'.$errfile.'"');
+
+        // --- We do not take care of any errors, etc.
+        return FALSE;
+    }
+
+    set_error_handler("catchPHPerrors");
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Read configuration file
 
     function readConfig($fileName)
@@ -409,7 +428,8 @@
         }
     }
 
-    _log('# Data passed to MailGraph main routine and used for processing'.$cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+    _log('# Data passed to MailGraph main routine and used for processing'.
+         $cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- CHECK AND SET P_ VARIABLES ---
     // FROM POST OR CLI DATA
@@ -613,6 +633,9 @@
     // --- Custom settings?
 
     $forceGraph = 0;
+    $triggerScreen = 0;
+    $triggerScreenPeriod = '';
+    $triggerScreenPeriodHeader = '';
 
     foreach($thisTrigger['result'][0]['tags'] as $aTag)
     {
@@ -662,6 +685,21 @@
                 $problemData['debug'] = 1;
                 _log('+ Mail debug log enabled');
                 break;
+
+            case 'mailGraph.screen':
+                $triggerScreen = intval($aTag['value']);
+                _log('+ Trigger screen = '.$triggerScreen);
+                break;
+
+            case 'mailGraph.screenPeriod':
+                $triggerScreenPeriod = $aTag['value'];
+                _log('+ Trigger screen period = '.$triggerScreenPeriod);
+                break;
+
+            case 'mailGraph.screenPeriodHeader':
+                $triggerScreenPeriodHeader = $aTag['value'];
+                _log('+ Trigger screen header = '.$triggerScreenPeriodHeader);
+                break;
         }
     }
 
@@ -709,7 +747,8 @@
     $request = array('jsonrpc'=>'2.0',
                      'method'=>'host.get',
                      'params'=>array('hostids'=>$hostId,
-                                     'output'=>'extend'),
+                                     'output'=>'extend',
+                                     'selectTags'=>'extend'),
                      'auth'=>$token,
                      'id'=>nextRequestID());
 
@@ -723,6 +762,33 @@
     $mailData['HOST_ERROR'] = $thisHost['result'][0]['error'];
     $mailData['HOST_DESCRIPTION'] = $thisHost['result'][0]['description'];
 
+    // --- Custom settings?
+
+    $hostScreen = 0;
+    $hostScreenPeriod = '';
+    $hostScreenPeriodHeader = '';
+
+    foreach($thisHost['result'][0]['tags'] as $aTag)
+    {
+        switch ($aTag['tag'])
+        {
+            case 'mailGraph.screen':
+                $hostScreen = intval($aTag['value']);
+                _log('+ Host screen (from TAG) = '.$hostScreen);
+                break;
+
+            case 'mailGraph.screenPeriod':
+                $hostScreenPeriod = $aTag['value'];
+                _log('+ Host screen period (from TAG) = '.$hostScreenPeriod);
+                break;
+
+            case 'mailGraph.screenPeriodHeader':
+                $hostScreenPeriodHeader = $aTag['value'];
+                _log('+ Host screen period header (from TAG) = '.$hostScreenPeriodHeader);
+                break;
+        }
+    }
+
     _log('# Retreive HOST macro information');
 
     $request = array('jsonrpc'=>'2.0',
@@ -735,9 +801,30 @@
     $thisMacros = postJSON($z_url_api,$request);
     _log('> Host macro data'.$cCRLF.json_encode($thisMacros,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
-    // --------------------------------------------
-    // --- GET GRAPHS ASSOCIATED WITH THIS HOST ---
-    // --------------------------------------------
+    foreach($thisMacros['result'] as $aMacro)
+    {
+        switch($aMacro['macro'])
+        {
+            case 'mailGraph.screen':
+                $hostScreen = intval($aMacro['value']);
+                _log('+ Host screen (from MACRO) = '.$hostScreen);
+                break;
+
+            case 'mailGraph.screenPeriod':
+                $hostScreenPeriod = $aMacro['value'];
+                _log('+ Host screen period (from MACRO) = '.$hostScreenPeriod);
+                break;
+
+            case 'mailGraph.screenPeriodHeader':
+                $hostScreenPeriodHeader = $aMacro['value'];
+                _log('+ Host screen header (from MACRO) = '.$hostScreenPeriodHeader);
+                break;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // --- GET GRAPHS ASSOCIATED WITH THIS HOST AND THE TRIGGER ITEMS ---
+    // ------------------------------------------------------------------
 
     _log('# Retrieve associated graphs to this HOST and the TRIGGER ITEMS');
 
@@ -781,7 +868,8 @@
                          'id'=>nextRequestID());
 
         $forceGraphInfo = postJSON($z_url_api,$request);
-        _log('> Forced graph data'.$cCRLF.json_encode($forceGraphInfo,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+        _log('> Forced graph data'.$cCRLF.
+             json_encode($forceGraphInfo,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
         if (!isset($forceGraphInfo['result'][0]))
         {
@@ -840,11 +928,95 @@
 
     _log('> Graphs found (matching/partial) = '.sizeof($matchedGraphs).' / '.sizeof($otherGraphs));
 
+    // ---------------------------------------------------------------------------
+    // --- FIND MATCHING GRAPH ITEMS WITH TRIGGER AND/OR HOST SCREEN REFERENCE ---
+    // ---------------------------------------------------------------------------
+
+    function _sort($a,$b)
+    {
+        if ($a['screen']['y']>$b['screen']['y']) { return(1); }
+        if ($a['screen']['y']<$b['screen']['y']) { return(-1); }
+        if ($a['screen']['x']>$b['screen']['x']) { return(1); }
+        if ($a['screen']['x']<$b['screen']['x']) { return(-1); }
+        return(0);
+    }
+
+    function fetchGraphsFromScreen($screenId)
+    {
+        global $token;
+        global $z_url_api;
+        global $cCRLF;
+
+        // --- Pick up the SCREEN ITEMS associated to the SCREEN
+
+        $request = array('jsonrpc'=>'2.0',
+                         'method'=>'screen.get',
+                         'params'=>array('screenids'=>$screenId,
+                                         'output'=>'extend',
+                                         'selectScreenItems'=>'extend'),
+                         'auth'=>$token,
+                         'id'=>nextRequestID());
+
+        $screenGraphs = postJSON($z_url_api,$request);
+        _log('> Screen items data for screen #'.$screenId.$cCRLF.json_encode($screenGraphs,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+        // --- Filter on specific type(s) and enrich the graph data
+
+        $result = array();
+
+        foreach($screenGraphs['result'][0]['screenitems'] as $anItem)
+        {
+            switch($anItem['resourcetype'])
+            {
+                case 0: // Graph
+                    $request = array('jsonrpc'=>'2.0',
+                                     'method'=>'graph.get',
+                                     'params'=>array('graphids'=>$anItem['resourceid'],
+                                                     'expandName'=>1,
+                                                     'output'=>'extend'),
+                                     'auth'=>$token,
+                                     'id'=>nextRequestID());
+
+                    $screenGraph = postJSON($z_url_api,$request);
+                    _log('+ Graph data for screen item #'.$anItem['screenitemid'].$cCRLF.
+                         json_encode($screenGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+                    $result[] = array('screen'=>$anItem,'name'=>$screenGraphs['result'][0]['name'],'graph'=>$screenGraph['result'][0]);
+                    break;
+            }
+        }
+
+        // --- Sort the result according to SCREEN x,y position
+
+        usort($result,"_sort");
+
+        // --- Done
+
+        return($result);
+    }
+
+    $triggerGraphs = array();
+
+    if ($triggerScreen>0)
+    {
+        _log('# Fetching graph information for TRIGGER for screen #'.$hostScreen);
+        $triggerGraphs = fetchGraphsFromScreen($triggerScreen);
+        _log('> Graphs found = '.sizeof($triggerGraphs));
+    }
+
+
+    if ($hostScreen>0)
+    {
+        _log('# Fetching graph information for HOST for screen #'.$hostScreen);
+        $hostGraphs = fetchGraphsFromScreen($hostScreen);
+        _log('> Graphs found = '.sizeof($hostGraphs));
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Fetch Graph //////////////////////////////////////////////////////////////////////////////////////////
+    // Fetch Graph(s) ///////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Determine number of periods for this graph
+    // Determine number of periods for the ITEM graphs
 
     $p_periods = array();
     $p_periods_headers = array();
@@ -883,8 +1055,12 @@
         }
     }
 
-    while (sizeof($p_periods)>4) { array_pop($p_periods); }
-    while (sizeof($p_periods_headers)>4) { array_pop($p_periods_headers); }
+    // Strip off any excessive elements from the end
+
+    while (sizeof($p_periods)>$maxGraphs) { array_pop($p_periods); }
+    while (sizeof($p_periods_headers)>$maxGraphs) { array_pop($p_periods_headers); }
+
+    // Fetching of the ITEM graphs
 
     $graphFiles = array();
     $graphURL = '';
@@ -930,14 +1106,78 @@
 
             $graphFiles[] = $graphFile;
 
-            $mailData['GRAPHS'][$aKey]['URL'] = $z_url_image . $graphFile;
-            $mailData['GRAPHS'][$aKey]['HEADER'] = $p_periods_headers[$aKey];
+            $mailData['GRAPHS_I'][$aKey]['PATH'] = $z_images_path . $graphFile;
+            $mailData['GRAPHS_I'][$aKey]['URL'] = $z_url_image . $graphFile;
+            $mailData['GRAPHS_I'][$aKey]['HEADER'] = $p_periods_headers[$aKey];
         }
 
         $mailData['GRAPH_ZABBIXLINK'] = $z_server.'graphs.php?form=update&graphid='.$mailData['GRAPH_ID'];
     }
 
-    // Prepare HTML LOG content
+    // Fetch graphs associated to TRIGGER or HOST screen references obtained earlier
+
+    function addGraphs($varName,$info,$period,$periodHeader)
+    {
+        global $p_graphWidth;
+        global $p_graphHeight;
+        global $p_showLegend;
+        global $z_url_image;
+        global $z_images_path;
+        global $z_server;
+        global $mailData;
+
+        $files = array();
+
+        foreach($info as $aKey=>$anItem)
+        {
+            $graphFile = GraphImageById($anItem['graph']['graphid'],
+                                        $p_graphWidth,$p_graphHeight,
+                                        $anItem['graph']['graphtype'],
+                                        $p_showLegend,$period);
+
+            $mailData['GRAPHS_'.$varName][$aKey]['URL'] = $z_url_image . $graphFile;
+            $mailData['GRAPHS_'.$varName][$aKey]['PATH'] = $z_images_path . $graphFile;
+        }
+
+        $mailData['GRAPHS_'.$varName.'_LINK'] = $z_server.'screens.php?elementid='.$info[0]['screen']['screenid'];
+        $mailData['GRAPHS_'.$varName.'_HEADER'] = $info[0]['name'];
+        $mailData['GRAPHS_'.$varName.'_PERIODHEADER'] = $periodHeader;
+
+    }
+
+    if (sizeof($triggerGraphs)>0)
+    {
+        if ($triggerScreenPeriod=='')
+        {
+            $triggerScreenPeriod = $p_periods[0];
+            $triggerScreenPeriodHeader = $p_periods_headers[0];
+        }
+
+        if ($triggerScreenPeriodHeader=='') { $triggerScreenPeriodHeader = $triggerScreenPeriod; }
+
+        addGraphs('T',$triggerGraphs,$triggerScreenPeriod,$triggerScreenPeriodHeader);
+
+        $mailData['TRIGGER_SCREEN'] = $triggerScreen;
+    }
+
+    if (sizeof($hostGraphs)>0)
+    {
+        if ($hostScreenPeriod=='')
+        {
+            $hostScreenPeriod = $p_periods[0];
+            $hostScreenPeriodHeader = $p_periods_headers[0];
+        }
+
+        if ($hostScreenPeriodHeader=='') { $hostScreenPeriodHeader = $hostScreenPeriod; }
+
+        addGraphs('H',$hostGraphs,$hostScreenPeriod,$hostScreenPeriodHeader);
+
+        $mailData['HOST_SCREEN'] = $hostScreen;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Prepare HTML LOG content /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     $mailData['LOG_HTML'] = implode('</br/>',$logging);
     $mailData['LOG_HTML'] = str_replace($cCRLF,'<br/>',$mailData['LOG_HTML']);
@@ -1031,18 +1271,25 @@
 
     $twig = new \Twig\Environment($loader);
 
-    if (sizeof($graphFiles)>0)
+    // --- Embed the images
+
+    function embedGraphs($graphs,$varName,$type)
     {
-        // Embed the image(s)
+        global $message;
+        global $mailData;
 
-        $graphReference = 0;
-
-        foreach($graphFiles as $graphFile)
+        foreach($graphs as $aKey=>$anItem)
         {
-            $mailData['GRAPHS'][$graphReference++]['CID'] = $message->embed(Swift_Image::fromPath($z_images_path.$graphFile));
-            _log('> Embedded graph image '.$z_images_path.$graphFile);
+            $mailData['GRAPHS_'.$varName][$aKey]['CID'] = $message->embed(Swift_Image::fromPath($mailData['GRAPHS_'.$varName][$aKey]['PATH']));
+            _log('> Embedded graph image ('.$type.') '.$mailData['GRAPHS_'.$varName][$aKey]['PATH']);
         }
     }
+
+    embedGraphs($graphFiles,'I','ITEM');
+    embedGraphs($triggerGraphs,'T','TRIGGER');
+    embedGraphs($hostGraphs,'H','HOST');
+
+    // --- Render the content
 
     $bodyHTML = $twig->render('html', $mailData);
     $bodyPlain = $twig->render('plain', $mailData);
