@@ -1,7 +1,7 @@
 ## mailGraph (v1.28)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
-**Please use the Wiki for information on how to install, configure and use MailGraph in Zabbix.**
+**Please use the [[ Wiki | https://github.com/moudsen/mailGraph/wiki ]] for information on how to install, configure and use MailGraph in Zabbix.**
 
 ## UPGRADE NOTES
 ### v1.27
