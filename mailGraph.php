@@ -35,6 +35,7 @@
     //                                 Suppressing Zabbix username-password in log
     // 1.27 2021/03/19 - Mark Oudsen - Added ability to define "mailGraph.screen" tag to embed graphs from
     //                                 Added PHP informational and warnings to log for easier debug/spotting
+    // 1.28 2021/03/24 - Mark Oudsen - Added ability to specify username/password for TLS/SSL
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -57,7 +58,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.27';
+    $cVersion = 'v1.28';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 4;
@@ -65,7 +66,7 @@
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = FALSE;          // Extended debug logging mode
+    $cDebug = TRUE;          // Extended debug logging mode
     $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
     $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
@@ -487,6 +488,12 @@
 
     $p_smtp_strict = 'yes';
     if ((isset($config['smtp_strict'])) && ($config['smtp_strict']=='no')) { $p_smtp_strict = 'no'; }
+
+    $p_smtp_username = '';
+    if (isset($config['smtp_username'])) { $p_smtp_username = $config['smtp_username']; }
+
+    $p_smtp_password = '';
+    if (isset($config['smtp_password'])) { $p_smtp_password = $config['smtp_password']; }
 
     $p_graph_match = 'any';
     if ((isset($config['graph_match'])) && ($config['graph_match']=='exact')) { $p_graph_match = 'exact'; }
@@ -1242,11 +1249,18 @@
         $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port));
     }
 
+    // Username/password?
+
+    if ($p_smtp_username!='') { $transport->setUsername($p_smtp_username); }
+    if ($p_smtp_password!='') { $transport->setPassword($p_smtp_password); }
+
+    // Start actual mail(er)
+
     $mailer = new Swift_Mailer($transport);
 
     $message = (new Swift_Message());
 
-    // Fetch mailer ID from this message (no Swift function available for it ...)
+    // --- Fetch mailer ID from this message (no Swift function available for it ...)
     // --- "Message-ID: <...id...@swift.generated>"
 
     $content = $message->toString();
@@ -1322,6 +1336,10 @@
 
     $response = array('messageId.mailGraph'=>$messageId);
     echo json_encode($response).$cCRLF;
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Wrap up //////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Store log?
 
