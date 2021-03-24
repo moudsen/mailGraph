@@ -11,4 +11,6 @@ If you upgrade to v1.27 please be aware of the additional features for adding Ta
 Template data provisioning and code has fundamentally changed. If you upgrade from an earlier version as v1.25, make sure you understand the changes in templates/html.template (now making use of arrays for lists of items).
 
 ## Example message
+The below message is just an example of what MailGraph is capable of. The template engine used ("Twig") however allows for a fully customized message creation to your needs!
+
 [![](images/Example-mail-message-v122.png?raw=true)](images/Example-mail-message-v122.png)
