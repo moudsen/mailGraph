@@ -36,6 +36,7 @@
     // 1.27 2021/03/19 - Mark Oudsen - Added ability to define "mailGraph.screen" tag to embed graphs from
     //                                 Added PHP informational and warnings to log for easier debug/spotting
     // 1.28 2021/03/24 - Mark Oudsen - Added ability to specify username/password for TLS/SSL
+    // 1.29 2021/04/03 - Mark Oudsen - Bugfix due to stricter JSONRPC version check since Zabbix 5.0.10
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -58,7 +59,7 @@
 
     // CONSTANTS
 
-    $cVersion = 'v1.28';
+    $cVersion = 'v1.29';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 4;
@@ -66,7 +67,7 @@
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = TRUE;          // Extended debug logging mode
+    $cDebug = FALSE;          // Extended debug logging mode
     $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
     $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
@@ -99,23 +100,24 @@
         $ch = curl_init();
 
         // Set options
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Zabbix-mailGraph - '.$cVersion);
 
         if ((isset($HTTPProxy)) && ($HTTPProxy!=''))
         {
-            _log('% Using proxy: '.$HTTPProxy);
+            if ($cDebug) { _log('% Using proxy: '.$HTTPProxy); }
             curl_setopt($ch, CURLOPT_PROXY, $HTTPProxy);
         }
 
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+
+        curl_setopt($ch, CURLOPT_POST, TRUE);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
-        curl_setopt($ch, CURLOPT_POST, TRUE);
-        curl_setopt($ch, CURLOPT_POSTFIELDS,
-                         json_encode($data,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Zabbix-mailGraph - '.$cVersion);
 
         // Execute Curl
         $data = curl_exec($ch);
@@ -124,9 +126,10 @@
         {
             _log('! Failed: '.curl_error($ch));
 
-            $data = 'An error occurred while retreiving the requested page.'.$cCRLF;
-            $data .= 'Requested page = '.$url.$cCRLF;
-            $data .= 'Error = '.curl_error($ch).$cCRLF;
+            $data = array();
+            $data[] = 'An error occurred while retreiving the requested page.';
+            $data[] .= 'Requested page = '.$url;
+            $data[] .= 'Error = '.curl_error($ch);
         }
         else
         {
@@ -564,7 +567,13 @@
     $token = '';
     if (isset($result['result'])) { $token = $result['result']; }
 
-    if ($token=='') { echo 'Error logging in to Zabbix? ('.$z_url_api.')'; die; }
+    if ($token=='')
+    {
+        echo 'Error logging in to Zabbix? ('.$z_url_api.'): '.$cCRLF;
+        echo var_dump($request).$cCRLF;
+        echo var_dump($result).$cCRLF;
+        die;
+    }
 
     _log('> Token = '.$token);
 
