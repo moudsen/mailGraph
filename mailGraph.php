@@ -37,6 +37,7 @@
     //                                 Added PHP informational and warnings to log for easier debug/spotting
     // 1.28 2021/03/24 - Mark Oudsen - Added ability to specify username/password for TLS/SSL
     // 1.29 2021/04/03 - Mark Oudsen - Bugfix due to stricter JSONRPC version check since Zabbix 5.0.10
+    //      2021/07/05 - Mark Oudsen - Minor detail added: CLI debug mode now also outputs version
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -407,6 +408,10 @@
     {
         if (($argc>1) && ($argv[1]=='test'))
         {
+            // Switch on CLI log display
+            $showLog = TRUE;
+
+            _log('<<< mailGraph '.$cVersion.' >>>');
             _log('# Invoked from CLI');
 
             // Assumes that config.json file has the correct information
@@ -426,9 +431,6 @@
             if (isset($config['cli_periods_headers'])) { $problemData['periods_headers'] = $config['cli_periods_headers']; }
             if (isset($config['cli_debug'])) { $problemData['debug'] = $config['cli_debug']; }
             if (isset($config['cli_proxy'])) { $problemData['HTTPProxy'] = $config['cli_proxy']; }
-
-            // Switch on CLI log display
-            $showLog = TRUE;
         }
     }
 
