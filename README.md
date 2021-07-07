@@ -1,7 +1,10 @@
+## Minor bugfixes to the code (2021/07/07)
+Some small fixes were added to v1.29, not big enough to cause a new release, but I suggest to replace the mailGraph.php code with the updated one to prevent possible errors leading into a non-functional mailGraph ...
+
 ## mailGraph (v1.29)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
-**Please use the Wiki for information on how to install, configure and use MailGraph in Zabbix.**
+**Please use the Wiki for information on how to install, configure and use MailGraph in Zabbix**
 
 ## UPGRADE NOTES
 ### v1.27
