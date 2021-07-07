@@ -38,6 +38,7 @@
     // 1.28 2021/03/24 - Mark Oudsen - Added ability to specify username/password for TLS/SSL
     // 1.29 2021/04/03 - Mark Oudsen - Bugfix due to stricter JSONRPC version check since Zabbix 5.0.10
     //      2021/07/05 - Mark Oudsen - Minor detail added: CLI debug mode now also outputs version
+    //      2021/07/07 - Mark Oudsen - Fixed HTTPProxy typo in code (instead of HTTPPRoxy)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -470,7 +471,7 @@
     $p_period = '48h';
     if (isset($problemData['period'])) { $p_period = $problemData['period']; }
 
-    if (isset($problemData['HTTPProxy'])) { $HTTPProxy = $problemData['HTTPPRoxy']; }
+    if (isset($problemData['HTTPProxy'])) { $HTTPProxy = $problemData['HTTPProxy']; }
 
     // DYNAMIC VARIABLES FROM ZABBIX
 
