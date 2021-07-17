@@ -27,7 +27,7 @@
         $content = file_get_contents($argv[1]);
         $data = json_decode($content,TRUE);
 
-        if ($data==NULL)
+        if (($data==NULL) && (sizeof($content)>2))
         {
             echo 'Invalid JSON format in config file?!'.$cCRLF;
             die;
