@@ -1,12 +1,19 @@
-## Minor bugfixes to the code (2021/07/07)
-Some small fixes were added to v1.29, not big enough to cause a new release, but I suggest to replace the mailGraph.php code with the updated one to prevent possible errors leading into a non-functional mailGraph ...
+## Minor bugfixes to the code (2021/10/06)
+Code improvements to prevent possible errors leading into a non-functional mailGraph ... (typical error within log or Zabbix: "json error").
+Please inform me in case you have PHP related errors in your logs - this should no longer be the case with v1.31.
 
-## mailGraph (v1.29)
+## mailGraph (v1.31)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 **Please use the Wiki for information on how to install, configure and use MailGraph in Zabbix**
 
 ## UPGRADE NOTES
+### v1.31
+Updated: mailGraph.pgp
+
+### v1.19
+Updated: mailGraph.php
+
 ### v1.27
 If you upgrade to v1.27 please be aware of the additional features for adding Tags to Trigger and Host to add additional graphs and the associated `html.template` updates that come alone with it (otherwise the new graphs will not show ...).
 
