@@ -1,6 +1,7 @@
 ## Minor bugfixes to the code (2021/10/06)
 Code improvements to prevent possible errors leading into a non-functional mailGraph ... (typical error within log or Zabbix: "json error").
-Please inform me in case you have PHP related errors in your logs - this should no longer be the case with v1.31.
+
+Please inform me (raise an issue) in case you have PHP related errors in your logs - this should no longer be the case with v1.31.
 
 ## mailGraph (v1.31)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
@@ -9,9 +10,9 @@ Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
 ## UPGRADE NOTES
 ### v1.31
-Updated: mailGraph.pgp
+Updated: mailGraph.pgp - Bugfixes and c
 
-### v1.19
+### v1.29
 Updated: mailGraph.php
 
 ### v1.27
@@ -21,6 +22,6 @@ If you upgrade to v1.27 please be aware of the additional features for adding Ta
 Template data provisioning and code has fundamentally changed. If you upgrade from an earlier version as v1.25, make sure you understand the changes in templates/html.template (now making use of arrays for lists of items).
 
 ## Example message
-The below message is just an example of what MailGraph is capable of. The template engine used ("Twig") however allows for a fully customized message creation to your needs!
+The below message is just an example of what MailGraph is capable of. The template engine used ("Twig") allows for a fully customized message creation to your needs!
 
 [![](images/Example-mail-message-v122.png?raw=true)](images/Example-mail-message-v122.png)
