@@ -9,7 +9,10 @@ A major change was required to deal with some API changes found in Zabbix 5.4.
 - Some parameters moved under "params" in JSON.
 - Care is taken about Some (unneccessry) warnings and index errors due to lack of testing of information available.
 
-To upgrade from v1.x to v2.0 you only have to replace mailGraph.php. No changes made to other files in this release.
+To upgrade from v1.x to v2.00 you only have to replace mailGraph.php. No changes made to other files in this release.
+
+## IMPORTANT NOTE ##
+As a result of a major functional change in Zabbix 5.4 (Screens no longer exist and are all moved into Dashboards) the mailGraph.screen macro no longer functions under Zabbix 5.4+. A code rewrite is in progress to deal with detecting the Zabbix version and to pick dashboard.get instead of screen.get as a source list for the graphs that should be included in the mail message.
 
 ## Minor bugfixes to the code (2021/10/06)
 Code improvements to prevent possible errors leading into a non-functional mailGraph ... (typical error within log or Zabbix: "json error").
