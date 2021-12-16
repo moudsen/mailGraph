@@ -39,9 +39,9 @@
     // 1.29 2021/04/03 - Mark Oudsen - Bugfix due to stricter JSONRPC version check since Zabbix 5.0.10
     //      2021/07/05 - Mark Oudsen - Minor detail added: CLI debug mode now also outputs version
     //      2021/07/07 - Mark Oudsen - Fixed HTTPProxy typo in code (instead of HTTPPRoxy)
-    //      2021/07/07 - Mark Oudsen - #20 - Added problem URL as ready to use TWIG macro
-    // 1.30 2021/07/07 - Mark Oudsen - Adding auto-cleaning of images, log retention and some more macros
-    // 1.31 2021/10/06 - Mark Oudsen - Bugfixes, PHP error suppression and prevention of trivial errors
+    // ------------------------------------------------------------------------------------------------------
+    // 2.00 2021/12/16 - Mark Oudsen - itemId not always provisioned by Zabbix
+    //                                 Several fixes on warning - several small bug fixes
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -58,14 +58,12 @@
     // 1) Fetch trigger, item, host, graph, event information via Zabbix API via CURL
     // 2) Fetch Graph(s) associated to the item/trigger (if any) via Zabbix URL login via CURL
     // 3) Build and send mail message from template using Swift/TWIG
-    // 4) Cleanup images, retention logs
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-
-    $cVersion = 'v1.31';
+    $cVersion = 'v2.00';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 4;
@@ -73,12 +71,11 @@
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = FALSE;          // Extended debug logging mode
+    $cDebug = TRUE;           // Extended debug logging mode
     $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
     $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
-    // Limit server level output errors; this will ensure no error messages are passed to Zabbix which
-    // otherwise will block mailGraph from functioning correctly
+    // Limit server level output errors
 
     error_reporting(E_ERROR | E_PARSE);
 
@@ -450,8 +447,8 @@
     // --- CHECK AND SET P_ VARIABLES ---
     // FROM POST OR CLI DATA
 
-    if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
-    $p_itemId = intval($problemData['itemId']);
+//    if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
+//    $p_itemId = intval($problemData['itemId']);
 
     if (!isset($problemData['eventId'])) { echo "Missing EVENT ID?\n"; die; }
     $p_eventId = intval($problemData['eventId']);
@@ -513,24 +510,18 @@
     $p_graph_match = 'any';
     if ((isset($config['graph_match'])) && ($config['graph_match']=='exact')) { $p_graph_match = 'exact'; }
 
-    $p_remove_images = 'yes';
-    if ((isset($config['remove_images'])) && ($config['remove_images']=='no')) { $p_remove_images = 'no'; }
-
-    $p_log_retention = 365;
-    if (isset($config['log_retention'])) { $p_log_retention =intval($config['log_retention']); }
-
     // --- GLOBAL CONFIGURATION ---
 
     // Script related settings
     $z_url = $config['script_baseurl'];             // Script URL location (for relative paths to images, templates, log, tmp)
-    $z_url_image = $z_url.'images/';                // Images URL (included in plain message as text)
+    $z_url_image = $z_url.'images/';                // Images URL (included in plain message text)
 
-    // Absolute paths for processing
+    // Absolute path where to store the generated images - note: script does not take care of clearing out old images!
     $z_path = getcwd().'/';                         // Absolute base path on the filesystem for this url
-    $z_images_path = $z_path.'images/';             // Storing images here
-    $z_template_path = $z_path.'templates/';        // Expecting templates here
-    $z_tmp_cookies = $z_path.'tmp/';                // Temporary path required for Cookies (front-end login to Zabbix for image generation)
-    $z_log_path = $z_path.'log/';                   // Where logs are stored of mailGraph
+    $z_images_path = $z_path.'images/';
+    $z_template_path = $z_path.'templates/';
+    $z_tmp_cookies = $z_path.'tmp/';
+    $z_log_path = $z_path.'log/';
 
     // Zabbix user (requires Super Admin access rights to access image generator script)
     $z_user = $config['zabbix_user'];
@@ -552,9 +543,9 @@
     // Check accessibility of paths and template files //////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    if (!is_writable($z_images_path)) { echo 'Image path inaccessible (should have read/write rights)?'.$cCRLF; die; }
-    if (!is_writable($z_tmp_cookies)) { echo 'Cookies temporary path inaccessible (should have read/write rights)?'.$cCRLF; die; }
-    if (!is_writable($z_log_path)) { echo 'Log path inaccessible (should have read/write rights)?'.$cCRLF; die; }
+    if (!is_writable($z_images_path)) { echo 'Image path inaccessible?'.$cCRLF; die; }
+    if (!is_writable($z_tmp_cookies)) { echo 'Cookies temporary path inaccessible?'.$cCRLF; die; }
+    if (!is_writable($z_log_path)) { echo 'Log path inaccessible?'.$cCRLF; die; }
     if (!file_exists($z_template_path.'html.template')) { echo 'HTML template missing?'.$cCRLF; die; }
     if (!file_exists($z_template_path.'plain.template')) { echo 'PLAIN template missing?'.$cCRLF; die; }
 
@@ -587,7 +578,7 @@
 
     if ($token=='')
     {
-        echo 'Error logging in to Zabbix (check username/password)? ('.$z_url_api.'): '.$cCRLF;
+        echo 'Error logging in to Zabbix? ('.$z_url_api.'): '.$cCRLF;
         echo var_dump($request).$cCRLF;
         echo var_dump($result).$cCRLF;
         die;
@@ -648,10 +639,10 @@
                      'params'=>array('triggerids'=>$p_triggerId,
                                      'output'=>'extend',
                                      'selectFunctions'=>'extend',
-                                     'selectTags'=>'extend'),
-                     'expandComment'=>1,
-                     'expandDescription'=>1,
-                     'expandExpression'=>1,
+                                     'selectTags'=>'extend',
+                                     'expandComment'=>1,
+                                     'expandDescription'=>1,
+                                     'expandExpression'=>1),
                      'auth'=>$token,
                      'id'=>nextRequestID());
 
@@ -737,6 +728,16 @@
         }
     }
 
+    if (!isset($p_itemId))
+    {
+        foreach($thisTrigger['result'][0]['functions'] as $aFunction)
+        {
+            $p_itemId = $aFunction['itemid'];
+            _log('- Item ID taken from trigger (first) function = '.$p_itemId);
+            break;
+        }
+    }
+
     // ---------------------
     // --- GET ITEM INFO ---
     // ---------------------
@@ -793,7 +794,7 @@
 
     $mailData['HOST_ID'] = $thisHost['result'][0]['hostid'];
     $mailData['HOST_NAME'] = $thisHost['result'][0]['name'];
-    $mailData['HOST_ERROR'] = $thisHost['result'][0]['error'];
+    if (isset($thisHost['result'][0]['error'])) { $mailData['HOST_ERROR'] = $thisHost['result'][0]['error']; }
     $mailData['HOST_DESCRIPTION'] = $thisHost['result'][0]['description'];
 
     // --- Custom settings?
@@ -1038,6 +1039,7 @@
         _log('> Graphs found = '.sizeof($triggerGraphs));
     }
 
+    $hostGraphs = array();
 
     if ($hostScreen>0)
     {
@@ -1210,7 +1212,7 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Prepare LOG related content //////////////////////////////////////////////////////////////////////////
+    // Prepare HTML LOG content /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     $mailData['LOG_HTML'] = implode('</br/>',$logging);
@@ -1223,17 +1225,16 @@
                             '</body>'.$cCRLF.
                             '</html>';
 
+    // Prepare PLAIN LOG content
+
     $mailData['LOG_PLAIN'] = implode(chr(10),$logging);
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Prepare others ///////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Prepare others
 
     $mailData['TRIGGER_URL'] = $z_server.'triggers.php?form=update&triggerid='.$mailData['TRIGGER_ID'];
     $mailData['ITEM_URL'] = $z_server.'items.php?form=update&hostid='.$mailData['HOST_ID'].'&itemid='.$mailData['ITEM_ID'];
     $mailData['HOST_URL'] = $z_server.'hosts.php?form=update&hostid='.$mailData['HOST_ID'];
     $mailData['EVENTDETAILS_URL'] = $z_server.'tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'];
-    $mailData['HOST_PROBLEMS_URL'] = $z_server.'zabbix.php?action=problem.view&filter_hostids%5B%5D='.$mailData['HOST_ID'].'&filter_set=1';
 
     $mailData['EVENT_DURATION'] = $p_duration;
 
@@ -1369,37 +1370,6 @@
     // Wrap up //////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Remove generated images? (default=yes)
-
-    function removeGraphs($graphs,$varName)
-    {
-        global $mailData;
-
-        foreach($graphs as $aKey=>$anItem)
-        {
-             unlink($mailData['GRAPHS_'.$varName][$aKey]['PATH']);
-             _log('> Removed generated image: '.$mailData['GRAPHS_'.$varName][$aKey]['PATH']);
-        }
-    }
-
-    if ($p_remove_images=='yes')
-    {
-        if (!$cDebug)
-        {
-            removeGraphs($graphFiles,'I');
-            removeGraphs($triggerGraphs,'T');
-            removeGraphs($hostGraphs,'H');
-        }
-        else
-        {
-            _log('> Not removing generated images (debug mode active)');
-        }
-    }
-    else
-    {
-        _log('> Not removing generated images');
-    }
-
     // Store log?
 
     if (($cDebug) || (isset($problemData['debug'])))
@@ -1413,6 +1383,6 @@
         $logName = 'log.'.$p_eventId.'.'.date('YmdHis').'.dump';
 
         file_put_contents($z_log_path.$logName,$content);
-    	_log('= Log stored to '.$z_log_path.$logName);
+        _log('= Log stored to '.$z_log_path.$logName);
     }
 ?>
