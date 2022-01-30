@@ -3,7 +3,7 @@ I've decided to take v2.0 forward through a series of code rewrites to facilitat
 
 Also looking at the "Zabbix Web Agenet" possibilities recently added to Zabbix 5.4 at the same time. Still no clue why Zabbix does not also move the Graph generation into such module and to provision an API on it ...
 
-## Major changes to the code (2021/12/16)
+## Major changes to the code due to Zabbix 5.4 recode by Zabbix team(2021/12/16)
 A major change was required to deal with some API changes found in Zabbix 5.4.
 - itemId is no longer passed by default by Zabbix. As a result the itemId is now picked up from the Trigger information (itemId from the first element in "functions").
 - Some parameters moved under "params" in JSON.
@@ -19,14 +19,20 @@ Code improvements to prevent possible errors leading into a non-functional mailG
 
 Please inform me (raise an issue) in case you have PHP related errors in your logs - this should no longer be the case with v1.31.
 
-## mailGraph (v2.0)
+## mailGraph (v2.02)
 Zabbix Media module and scripts for sending e-mail alerts with graphs.
 
+**v1.x is no longer supported; please upgrade to the current v2 release**
 **Please use the Wiki for information on how to install, configure and use MailGraph in Zabbix**
 
 ## UPGRADE NOTES
+### v2.01
+Updated: mailGraph.php
+### v2.00
+Updated: mailGraph.php
+
 ### v1.31
-Updated: mailGraph.pgp - Bugfixes and c
+Updated: mailGraph.php
 
 ### v1.29
 Updated: mailGraph.php
@@ -38,6 +44,6 @@ If you upgrade to v1.27 please be aware of the additional features for adding Ta
 Template data provisioning and code has fundamentally changed. If you upgrade from an earlier version as v1.25, make sure you understand the changes in templates/html.template (now making use of arrays for lists of items).
 
 ## Example message
-The below message is just an example of what MailGraph is capable of. The template engine used ("Twig") allows for a fully customized message creation to your needs!
+The below message is just an example of what MailGraph is capable of. The template engine ("Twig") allows for a fully customized message creation to your needs! It is also possible to add more Zabbix fields. If you need additional fields just raise an issue ticket and ask and I'll see what I can do.
 
 [![](images/Example-mail-message-v122.png?raw=true)](images/Example-mail-message-v122.png)
