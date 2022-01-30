@@ -42,6 +42,8 @@
     // ------------------------------------------------------------------------------------------------------
     // 2.00 2021/12/16 - Mark Oudsen - itemId not always provisioned by Zabbix
     //                                 Several fixes on warning - several small bug fixes
+    // 2.01 2021/12/16 - Mark Oudsen - Screens are no longer available - reverting to using Dashboards now
+    // 2.02 2022/01/30 - Mark Oudsen - Added cleanup routine for old logs and images
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -63,7 +65,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.00';
+    $cVersion = 'v2.020';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 4;
@@ -389,6 +391,40 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Cleanup 'path': remove files with 'ext' older than 'daysOld'
+
+    function cleanupDir($path, $ext, $daysOld)
+    {
+        _log('- Scanning "'.$path.'"');
+
+        $files = glob($path.'/*'.$ext);
+        $now = time();
+
+        $filesRemoved = 0;
+        $filesKept = 0;
+
+        foreach ($files as $file)
+        {
+            if (is_file($file))
+            {
+                if ($now - filemtime($file) >= (60 * 60 * 24 * $daysOld))
+                {
+                    _log('> Removing "'.$file.'"');
+                    unlink($file);
+                    $filesRemoved++;
+                }
+                else
+                {
+                    $filesKept++;
+                }
+            }
+        }
+
+        _log(': Done. Cleaned up '.$filesRemoved.' file(s), kept '.$filesKept.' file(s)');
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -438,6 +474,31 @@
             if (isset($config['cli_periods_headers'])) { $problemData['periods_headers'] = $config['cli_periods_headers']; }
             if (isset($config['cli_debug'])) { $problemData['debug'] = $config['cli_debug']; }
             if (isset($config['cli_proxy'])) { $problemData['HTTPProxy'] = $config['cli_proxy']; }
+        }
+
+        if (($argc>1) && ($argv[1]=='cleanup'))
+        {
+            // Switch on CLI log display
+            $showLog = TRUE;
+
+            // Check for configuration of retention period for images and logs
+            _log('<<< mailGraph '.$cVersion.' >>>');
+            _log('# Invoked from CLI');
+
+            // Set defaults
+            $retImages = 30;
+            $retLogs = 14;
+
+            // Check if configured settings
+            if (isset($config['retention_images'])) { $retImages = intval($config['retention_images']); }
+            if (isset($config['retention_logs'])) { $retLogs = intval($config['retention_logs']); }
+
+            _log('Cleaning up IMAGES ('.$retImages.' days) and LOGS ('.$retLogs.' days)');
+
+            cleanupDir(getcwd().'/images', '.png', $retImages);
+            cleanupDir(getcwd().'/log', '.dump', $retLogs);
+
+            exit(0);
         }
     }
 
