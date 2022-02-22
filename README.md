@@ -1,7 +1,15 @@
-## Major rework announcement (2021/12/16)
+## Major rework announcement
+_(2022/02/22)_
+
+Testing on Zabbix 6.0 LTS is in progress. If successful documentatione will be updated accordingly.
+
+At the same time the provisioned auto configuration/installation tool for mailGraph will be introduced (also including an auto-update function).
+
+_(2021/12/16)_
+
 I've decided to take v2.0 forward through a series of code rewrites to facilitate some requests and to start with the code separation for obtaining Graphs through stand-alone code.
 
-Also looking at the "Zabbix Web Agenet" possibilities recently added to Zabbix 5.4 at the same time. Still no clue why Zabbix does not also move the Graph generation into such module and to provision an API on it ...
+Also looking at the "Zabbix Web Agent" possibilities recently added to Zabbix 5.4 at the same time. Still no clue why Zabbix does not also move the Graph generation into such module and to provision an API on it ...
 
 ## Major changes to the code due to Zabbix 5.4 recode by Zabbix team(2021/12/16)
 A major change was required to deal with some API changes found in Zabbix 5.4.
