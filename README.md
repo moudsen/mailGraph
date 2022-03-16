@@ -1,4 +1,8 @@
 ## Major rework announcement
+_(2022/03/16)_
+
+Testing on Zabbix 6.0.2 LTS has been suvccesfully completed in one of my production level environments. Updating Wiki and other documentation on on short notice.
+
 _(2022/02/22)_
 
 Testing on Zabbix 6.0 LTS is in progress. If successful documentatione will be updated accordingly.
@@ -11,8 +15,8 @@ I've decided to take v2.0 forward through a series of code rewrites to facilitat
 
 Also looking at the "Zabbix Web Agent" possibilities recently added to Zabbix 5.4 at the same time. Still no clue why Zabbix does not also move the Graph generation into such module and to provision an API on it ...
 
-## Major changes to the code due to Zabbix 5.4 recode by Zabbix team(2021/12/16)
-A major change was required to deal with some API changes found in Zabbix 5.4.
+## Major changes to the code due to Zabbix 5.4+ recode by Zabbix team(2021/12/16)
+A major change was required to deal with some API changes found in Zabbix 5.4+.
 - itemId is no longer passed by default by Zabbix. As a result the itemId is now picked up from the Trigger information (itemId from the first element in "functions").
 - Some parameters moved under "params" in JSON.
 - Care is taken about Some (unneccessry) warnings and index errors due to lack of testing of information available.
