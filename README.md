@@ -1,3 +1,8 @@
+## Zabbix 6.2.x testing ##
+_(2022/08/22)_
+
+Zabbix 6.2.x testing is in progress. Once completed the next effort will be to deliver on automatic configuration detection and automatic updates.
+
 ## Major rework announcement
 _(2022/03/16)_
 
