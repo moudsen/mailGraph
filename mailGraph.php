@@ -48,7 +48,7 @@
     //                                 Several fixes on warning - several small bug fixes
     // 2.01 2021/12/16 - Mark Oudsen - Screens are no longer available - reverting to using Dashboards now
     // 2.02 2022/01/30 - Mark Oudsen - Added cleanup routine for old logs and images
-    // 2.10 2023/06/30 - Mark Oudsen - Refactored deprecated code - now compatible with Zabbix 6.4
+    // 2.10 2023/06/30 - Mark Oudsen - Refactored deprecated code - now compatible with Zabbix 6.0 LTS, 6.4
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
