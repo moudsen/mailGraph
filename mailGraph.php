@@ -520,7 +520,7 @@
     $p_eventId = intval($problemData['eventId']);
 
     if (!isset($problemData['recipient'])) { echo "Missing RECIPIENT?\n"; die; }
-    $nt = $problemData['recipient'];
+    $p_recipient = $problemData['recipient'];
 
     if (!isset($problemData['duration'])) { echo "Missing DURATION?\n"; die; }
     $p_duration = intval($problemData['duration']);
@@ -595,6 +595,7 @@
 
     // Zabbix API user (requires Super Admin access rights)
     // --- Copy from Zabbix user and override when defined in configuration
+    // TODO: Check if information retreival can be done with less rigths
     $z_api_user = $z_user;
     $z_api_pass = $z_pass;
 
@@ -718,7 +719,7 @@
                                      'selectTags'=>'extend',
                                      'expandComment'=>1,
                                      'expandDescription'=>1,
-                                     'expandExpresion'=>1),
+                                     'expandExpression'=>1),
                      'auth'=>$token,
                      'id'=>nextRequestID());
 
@@ -1030,7 +1031,7 @@
                     else
                     {
                         $otherGraphs[] = $aGraph;
-                        _log('~ Graph #'.$aGraphItem['graphid'].' partial match found (item #'.$GraphItem['itemid'].')');
+                        _log('~ Graph #'.$aGraphItem['graphid'].' partial match found (item #'.$aGraphItem['itemid'].')');
                     }
                 }
             }
