@@ -7,7 +7,7 @@ try {
         result = { tags: {} };
 
     // Set HTTP proxy if required
-    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') {
+    if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {
         req.setProxy(params.HTTPProxy);
         fields.HTTPProxy = params.HTTPProxy;
     }
