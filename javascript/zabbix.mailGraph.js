@@ -1,19 +1,19 @@
 try {
     // Pickup parameters
     params = JSON.parse(value),
-        req = new CurlHttpRequest(),
+        req = new HttpRequest(),
         fields = {},
         resp = '',
         result = { tags: {} };
 
     // Set HTTP proxy if required
-    if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {
+    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') {
         req.setProxy(params.HTTPProxy);
         fields.HTTPProxy = params.HTTPProxy;
     }
 
     // Declare output type
-    req.AddHeader('Content-Type: application/json');
+    req.addHeader('Content-Type: application/json');
 
     // Must have fields
     fields.itemId = params.itemId;
@@ -40,11 +40,11 @@ try {
 
     // Post information to the processing script
     Zabbix.Log(4, '[MailGraph Webhook] Sending request: ' + params.URL + '?' + JSON.stringify(fields));
-    var resp = req.Post(params.URL,JSON.stringify(fields));
+    var resp = req.post(params.URL,JSON.stringify(fields));
     Zabbix.Log(4, '[Mailgraph Webhook] Receiving response:' + resp);
 
     // If there was an error, report it
-    if (req.Status() != 200) { throw JSON.parse(resp).errors[0]; }
+    if (req.getStatus() != 200) { throw JSON.parse(resp).errors[0]; }
 
     // We expect the message id back from the processing script
     resp = JSON.parse(resp);

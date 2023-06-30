@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
-    <version>5.0</version>
-    <date>2021-03-17T12:55:43Z</date>
+    <version>6.0</version>
+    <date>2023-06-29T23:22:52Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
             <type>WEBHOOK</type>
-            <parameters>
+             <parameters>
                 <parameter>
                     <name>baseURL</name>
                     <value>https://mydomain.com/zabbix/</value>
@@ -64,124 +64,125 @@
                     <value>https://mydomain.com/mailGraph.php</value>
                 </parameter>
             </parameters>
-            <script>try {&#13;
-    // Pickup parameters&#13;
-    params = JSON.parse(value),&#13;
-        req = new CurlHttpRequest(),&#13;
-        fields = {},&#13;
-        resp = '',&#13;
-        result = { tags: {} };&#13;
-&#13;
-    // Set HTTP proxy if required&#13;
-    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') {&#13;
-        req.setProxy(params.HTTPProxy);&#13;
-        fields.HTTPProxy = params.HTTPProxy;&#13;
-    }&#13;
-&#13;
-    // Declare output type&#13;
-    req.AddHeader('Content-Type: application/json');&#13;
-&#13;
-    // Must have fields&#13;
-    fields.itemId = params.itemId;&#13;
-    fields.eventId = params.eventId;&#13;
-    fields.recipient = params.recipient;&#13;
-    fields.baseURL = params.baseURL;&#13;
-    fields.duration = params.duration;&#13;
-&#13;
-    // Optional fields&#13;
-    if (typeof params.graphWidth === 'string') { fields.graphWidth = params.graphWidth; }&#13;
-    if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }&#13;
-    if (typeof params.subject === 'string') { fields.subject = params.subject; }&#13;
-    if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }&#13;
-    if (typeof params.periods === 'string') { fields.periods = params.periods; }&#13;
-    if (typeof params.periods_headers === 'string') { fields.periods_headers = params.periods_headers; }&#13;
-    if (typeof params.debug === 'string') { fields.debug = params.debug; }&#13;
-&#13;
-    // Add generic fields&#13;
-    Object.keys(params).forEach(function(key) {&#13;
-        if (key.substring(0, 4) == 'info') {&#13;
-            fields[key] = params[key];&#13;
-        }&#13;
-    });&#13;
-&#13;
-    // Post information to the processing script&#13;
-    Zabbix.Log(4, '[MailGraph Webhook] Sending request: ' + params.URL + '?' + JSON.stringify(fields));&#13;
-    var resp = req.Post(params.URL,JSON.stringify(fields));&#13;
-    Zabbix.Log(4, '[Mailgraph Webhook] Receiving response:' + resp);&#13;
-&#13;
-    // If there was an error, report it&#13;
-    if (req.Status() != 200) { throw JSON.parse(resp).errors[0]; }&#13;
-&#13;
-    // We expect the message id back from the processing script&#13;
-    resp = JSON.parse(resp);&#13;
-    result.tags.__message_id = resp.messageId;&#13;
-&#13;
-    // Pass the result back to Zabbix&#13;
-    return JSON.stringify(result);&#13;
-}&#13;
-catch (error)&#13;
-{&#13;
-    // In case something went wrong in the processing, pass the error back to Zabbix&#13;
-    Zabbix.Log(127, 'MailGraph notification failed : '+error);&#13;
-    throw 'MailGraph notification failed : '+error;&#13;
+
+            <script>try {
+    // Pickup parameters
+    params = JSON.parse(value),
+        req = new HttpRequest(),
+        fields = {},
+        resp = '',
+        result = { tags: {} };
+
+    // Set HTTP proxy if required
+    if (typeof params.HTTPProxy === 'string' &amp;&amp; params.HTTPProxy.trim() !== '') {
+        req.setProxy(params.HTTPProxy);
+        fields.HTTPProxy = params.HTTPProxy;
+    }
+
+    // Declare output type
+    req.addHeader('Content-Type: application/json');
+
+    // Must have fields
+    fields.itemId = params.itemId;
+    fields.eventId = params.eventId;
+    fields.recipient = params.recipient;
+    fields.baseURL = params.baseURL;
+    fields.duration = params.duration;
+
+    // Optional fields
+    if (typeof params.graphWidth === 'string') { fields.graphWidth = params.graphWidth; }
+    if (typeof params.graphHeight === 'string') { fields.graphHeight = params.graphHeight; }
+    if (typeof params.subject === 'string') { fields.subject = params.subject; }
+    if (typeof params.showLegend === 'string') { fields.showLegend = params.showLegend; }
+    if (typeof params.periods === 'string') { fields.periods = params.periods; }
+    if (typeof params.periods_headers === 'string') { fields.periods_headers = params.periods_headers; }
+    if (typeof params.debug === 'string') { fields.debug = params.debug; }
+
+    // Add generic fields
+    Object.keys(params).forEach(function(key) {
+        if (key.substring(0, 4) == 'info') {
+            fields[key] = params[key];
+        }
+    });
+
+    // Post information to the processing script
+    Zabbix.Log(4, '[MailGraph Webhook] Sending request: ' + params.URL + '?' + JSON.stringify(fields));
+    var resp = req.post(params.URL,JSON.stringify(fields));
+    Zabbix.Log(4, '[Mailgraph Webhook] Receiving response:' + resp);
+
+    // If there was an error, report it
+    if (req.getStatus() != 200) { throw JSON.parse(resp).errors[0]; }
+
+    // We expect the message id back from the processing script
+    resp = JSON.parse(resp);
+    result.tags.__message_id = resp.messageId;
+
+    // Pass the result back to Zabbix
+    return JSON.stringify(result);
+}
+catch (error)
+{
+    // In case something went wrong in the processing, pass the error back to Zabbix
+    Zabbix.Log(127, 'MailGraph notification failed : '+error);
+    throw 'MailGraph notification failed : '+error;
 }</script>
             <process_tags>YES</process_tags>
-            <description>The &quot;URL&quot; must point to the location of the processing script. If a proxy is required, define &quot;HTTPProxy&quot; for the proxy address.&#13;
-&#13;
-Customization:&#13;
-- &quot;graphWidth&quot; and &quot;graphWidth&quot; can be defined for the image size&#13;
-- &quot;showLegend&quot; can be defined to show or hide the legend of the graph&#13;
-- &quot;subject&quot; can be defined for a customized subject for the mail message&#13;
-- &quot;periods&quot; and &quot;periods_headers&quot; can be defined for displaying multiple periods of the same graph, or&#13;
-- &quot;period&quot; and &quot;period_header&quot; can be defined to display a single graph&#13;
-&#13;
-The html.template and plain.template files can be adjusted (TWIG format).&#13;
-&#13;
+            <description>The &quot;URL&quot; must point to the location of the processing script. If a proxy is required, define &quot;HTTPProxy&quot; for the proxy address.
+
+Customization:
+- &quot;graphWidth&quot; and &quot;graphWidth&quot; can be defined for the image size
+- &quot;showLegend&quot; can be defined to show or hide the legend of the graph
+- &quot;subject&quot; can be defined for a customized subject for the mail message
+- &quot;periods&quot; and &quot;periods_headers&quot; can be defined for displaying multiple periods of the same graph, or
+- &quot;period&quot; and &quot;period_header&quot; can be defined to display a single graph
+
+The html.template and plain.template files can be adjusted (TWIG format).
+
 More details are available at https://github.com/moudsen/mailGraph</description>
             <message_templates>
                 <message_template>
                     <event_source>TRIGGERS</event_source>
                     <operation_mode>PROBLEM</operation_mode>
                     <subject>Problem: {EVENT.NAME}</subject>
-                    <message>Problem started at {EVENT.TIME} on {EVENT.DATE}&#13;
-Problem name: {EVENT.NAME}&#13;
-Host: {HOST.NAME}&#13;
-Severity: {EVENT.SEVERITY}&#13;
-Operational data: {EVENT.OPDATA}&#13;
-Original problem ID: {EVENT.ID}&#13;
-{TRIGGER.URL}&#13;
-&#13;
-eventId: {EVENT.ID}&#13;
-TriggerId: {TRIGGER.ID}&#13;
+                    <message>Problem started at {EVENT.TIME} on {EVENT.DATE}
+Problem name: {EVENT.NAME}
+Host: {HOST.NAME}
+Severity: {EVENT.SEVERITY}
+Operational data: {EVENT.OPDATA}
+Original problem ID: {EVENT.ID}
+{TRIGGER.URL}
+
+eventId: {EVENT.ID}
+TriggerId: {TRIGGER.ID}
 itemId: {ITEM.ID]</message>
                 </message_template>
                 <message_template>
                     <event_source>TRIGGERS</event_source>
                     <operation_mode>RECOVERY</operation_mode>
-                    <subject>Resolved in {EVENT.DURATION}: {EVENT.NAME}</subject>
-                    <message>Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}&#13;
-Problem name: {EVENT.NAME}&#13;
-Problem duration: {EVENT.DURATION}&#13;
-Host: {HOST.NAME}&#13;
-Severity: {EVENT.SEVERITY}&#13;
-Original problem ID: {EVENT.ID}&#13;
-{TRIGGER.URL}&#13;
-&#13;
-eventId: {EVENT.ID}&#13;
-TriggerId: {TRIGGER.ID}&#13;
+                    <subject>Resolved in {EVENT.DURATION}: {EVENT.RECOVERY.NAME}</subject>
+                    <message>Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+Problem name: {EVENT.RECOVERY.NAME}
+Problem duration: {EVENT.DURATION}
+Host: {HOST.NAME}
+Severity: {EVENT.SEVERITY}
+Original problem ID: {EVENT.ID}
+{TRIGGER.URL}
+
+eventId: {EVENT.ID}
+TriggerId: {TRIGGER.ID}
 itemId: {ITEM.ID]</message>
                 </message_template>
                 <message_template>
                     <event_source>TRIGGERS</event_source>
                     <operation_mode>UPDATE</operation_mode>
                     <subject>Updated problem in {EVENT.AGE}: {EVENT.NAME}</subject>
-                    <message>{USER.FULLNAME} {EVENT.UPDATE.ACTION} problem at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.&#13;
-{EVENT.UPDATE.MESSAGE}&#13;
-&#13;
-Current problem status is {EVENT.STATUS}, age is {EVENT.AGE}, acknowledged: {EVENT.ACK.STATUS}.&#13;
-&#13;
-eventId: {EVENT.ID}&#13;
-TriggerId: {TRIGGER.ID}&#13;
+                    <message>{USER.FULLNAME} {EVENT.UPDATE.ACTION} problem at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.
+{EVENT.UPDATE.MESSAGE}
+
+Current problem status is {EVENT.STATUS}, age is {EVENT.AGE}, acknowledged: {EVENT.ACK.STATUS}.
+
+eventId: {EVENT.ID}
+TriggerId: {TRIGGER.ID}
 itemId: {ITEM.ID]</message>
                 </message_template>
             </message_templates>

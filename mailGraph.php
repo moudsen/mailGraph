@@ -8,6 +8,8 @@
     // upon an alert message.
     //
     // ------------------------------------------------------------------------------------------------------
+    // Release 1 tested with Zabbix 5.4 and 6.0 LTS
+    // ------------------------------------------------------------------------------------------------------
     // 1.00 2021/02/26 - Mark Oudsen - MVP version, ready for distribution
     // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item // bug fixes
     // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
@@ -40,10 +42,13 @@
     //      2021/07/05 - Mark Oudsen - Minor detail added: CLI debug mode now also outputs version
     //      2021/07/07 - Mark Oudsen - Fixed HTTPProxy typo in code (instead of HTTPPRoxy)
     // ------------------------------------------------------------------------------------------------------
+    // Release 2 tested with Zabbix 5.4, 6.0 LTS and 6.4 - tested with latest Composer libraries
+    // ------------------------------------------------------------------------------------------------------
     // 2.00 2021/12/16 - Mark Oudsen - itemId not always provisioned by Zabbix
     //                                 Several fixes on warning - several small bug fixes
     // 2.01 2021/12/16 - Mark Oudsen - Screens are no longer available - reverting to using Dashboards now
     // 2.02 2022/01/30 - Mark Oudsen - Added cleanup routine for old logs and images
+    // 2.10 2023/06/30 - Mark Oudsen - Refactored deprecated code - now compatible with Zabbix 6.4
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -65,7 +70,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.020';
+    $cVersion = 'v2.10';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 4;
@@ -515,7 +520,7 @@
     $p_eventId = intval($problemData['eventId']);
 
     if (!isset($problemData['recipient'])) { echo "Missing RECIPIENT?\n"; die; }
-    $p_recipient = $problemData['recipient'];
+    $nt = $problemData['recipient'];
 
     if (!isset($problemData['duration'])) { echo "Missing DURATION?\n"; die; }
     $p_duration = intval($problemData['duration']);
@@ -589,9 +594,19 @@
     $z_pass = $config['zabbix_user_pwd'];
 
     // Zabbix API user (requires Super Admin access rights)
-    // TODO: Check if information retreival can be done with less rigths
-    $z_api_user = $config['zabbix_api_user'];
-    $z_api_pass = $config['zabbix_api_pwd'];
+    // --- Copy from Zabbix user and override when defined in configuration
+    $z_api_user = $z_user;
+    $z_api_pass = $z_pass;
+
+    if (isset($config['zabbix_api_user']))
+    {
+        $z_api_user = $config['zabbix_api_user'];
+    }
+
+    if (isset($config['zabbix_api_pwd']))
+    {
+        $z_api_pass = $config['zabbix_api_pwd'];
+    }
 
     // Mail sender
     $mailFrom = array($config['mail_from']=>'Zabbix Mailgraph');
@@ -627,7 +642,7 @@
 
     $request = array('jsonrpc'=>'2.0',
                      'method'=>'user.login',
-                     'params'=>array('user'=>$z_api_user,
+                     'params'=>array('username'=>$z_api_user,
                                      'password'=>$z_api_pass),
                      'id'=>nextRequestID(),
                      'auth'=>null);
@@ -703,7 +718,7 @@
                                      'selectTags'=>'extend',
                                      'expandComment'=>1,
                                      'expandDescription'=>1,
-                                     'expandExpression'=>1),
+                                     'expandExpresion'=>1),
                      'auth'=>$token,
                      'id'=>nextRequestID());
 
@@ -1015,7 +1030,7 @@
                     else
                     {
                         $otherGraphs[] = $aGraph;
-                        _log('~ Graph #'.$aGraphItem['graphid'].' partial match found (item #'.$aGraphItem['itemid'].')');
+                        _log('~ Graph #'.$aGraphItem['graphid'].' partial match found (item #'.$GraphItem['itemid'].')');
                     }
                 }
             }
