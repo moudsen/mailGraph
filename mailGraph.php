@@ -49,6 +49,8 @@
     // 2.01 2021/12/16 - Mark Oudsen - Screens are no longer available - reverting to using Dashboards now
     // 2.02 2022/01/30 - Mark Oudsen - Added cleanup routine for old logs and images
     // 2.10 2023/06/30 - Mark Oudsen - Refactored deprecated code - now compatible with Zabbix 6.0 LTS, 6.4
+    // 2.11 2023/07/01 - Mark Oudsen - Refactored Zabbix javascript - now capturing obvious errors
+    //                                 Added ability to locate latest problems for testing purposes
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -70,7 +72,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.10';
+    $cVersion = 'v2.11';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 4;
@@ -662,6 +664,31 @@
     }
 
     _log('> Token = '.$token);
+
+    // -----------------------------------
+    // --- IF NO EVENT ID FETCH LATEST ---
+    // -----------------------------------
+
+    if ($p_eventId=="0")
+    {
+        _log('# No event ID given, picking up random event from Zabbix');
+
+        $request = array('jsonrpc'=>'2.0',
+                         'method'=>'problem.get',
+                         'params'=>array('output'=>'extend',
+                                         'recent'=>'true',
+                                         'limit'=>1),
+                         'auth'=>$token,
+                         'id'=>nextRequestID());
+
+        $thisProblems = postJSON($z_url_api, $request);
+        _log('> Problem data'.$cCRLF.json_encode($thisProblems,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+        if (!isset($thisProblems['result'][0])) { echo '! No response data received?'.$cCRLF; die; }
+
+        $p_eventId = $thisProblems['result'][0]['eventid'];
+        _log('> Picked up random last event #'.$p_eventId);
+    }
 
     // ------------------------------
     // --- READ EVENT INFORMATION ---
@@ -1440,8 +1467,15 @@
 
     // Return Event TAG information for Zabbix
 
-    $response = array('messageId.mailGraph'=>$messageId);
-    echo json_encode($response).$cCRLF;
+    $response = array('messageId'=>$messageId);
+
+    if ($response=="")
+    {
+        _log("! Failed to send mail message");
+        echo "! Failed to send mail message. Likely an issue with the recipient email address?".$cCRLF;
+    } else {
+        echo json_encode($response).$cCRLF;
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Wrap up //////////////////////////////////////////////////////////////////////////////////////////////

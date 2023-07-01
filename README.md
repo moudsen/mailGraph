@@ -1,10 +1,12 @@
-## mailGraph v2.10 release ##
-_(2023/06/30)_
+## mailGraph v2.11 release ##
+_(2023/07/01)_
 
-_This version has been verified with Zabbix 5.4, 6.0 LTS and 6.4._
+_This version has been verified with Zabbix 5.4 and 6.0 LTS and is expected to work with 6.4 and later (based on v2.10 testing)_
 
-Minor updates to the mailGraph code
-- When not defining zabbix_api_user and zabbix_api_pwd in the configuration file the zbx_user and zbx_user_pwd wll be used
+Release notes
+- Added pre- and postchecking of variables to the Zabbix javascript - this will prevent the 'invalid JSON' messages and provide better feedback for errors
+- When testing MailGraph it is now possible to set the eventId to zero - a random problem will be picked up via the API
+- Zabbix Media Type XML reverted back to version 5.4 (for backwards compatibility)
 
 Modified files
 - mailGraph.php
@@ -17,6 +19,14 @@ For those upgrading to the latest release without installing the media type:
 -- replace the script contents with the contents of javascript/zabbix.mailGraph.js
 
 Changes are in effect immediately, no need to restart any services.
+
+## mailGraph v2.10 release ##
+_(2023/06/30)_
+
+_This version has been verified with Zabbix 5.4, 6.0 LTS and 6.4._
+
+Minor updates to the mailGraph code
+- When not defining zabbix_api_user and zabbix_api_pwd in the configuration file the zbx_user and zbx_user_pwd wll be used
 
 ## Zabbix 6.4.x testing ##
 _(2023/06/30)_
