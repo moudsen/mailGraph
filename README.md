@@ -20,6 +20,18 @@ More information can be found in the Wiki.
 ## Installation ##
 Please refer to the Wiki how to get mailGraph installed and configured on your system.
 
+## mailGraph v2.12 release ##
+_(2023/07/02)_
+
+_This version has been verified with Zabbix 5.4 and 6.0 LTS and is expected to work with 6.4 and later (based on v2.10 testing)_
+
+Release notes
+- Replaced Swiftmailer with PHPMailer
+- Configuration option "smtp_transport" removed (using PHPMailer AutoTLS)
+- Code cleanup (markup and obsolete related parts)
+- Addressed any PHP message (deprecation or error) - mailGraph debug output is now "clean" in PHP 7.4.x and PHP 8.2.x
+- Increased maximum number of graphs from 4 to 8
+
 ## mailGraph v2.11 release ##
 _(2023/07/01)_
 
