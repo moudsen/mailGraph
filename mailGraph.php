@@ -51,10 +51,24 @@
     // 2.10 2023/06/30 - Mark Oudsen - Refactored deprecated code - now compatible with Zabbix 6.0 LTS, 6.4
     // 2.11 2023/07/01 - Mark Oudsen - Refactored Zabbix javascript - now capturing obvious errors
     //                                 Added ability to locate latest problems for testing purposes
+    // 2.12 2023/07/xx - Mark Oudsen - Replaced SwiftMailer with PHPMailer (based on AutoTLS)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
     // MIT License
+    //
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Roadmap
+    // -------
+    // - Automatic setup and configuration of mailGraph
+    // - Automatic code updates (CLI triggered)
+    // - Add DASHBOARD facility (SCREEN was abandoned in Zabbix 5.4
+    // - Extract Graph API functionality to seperate code unit/object
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,15 +86,15 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.11';
+    $cVersion = 'v2.12';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
-    $maxGraphs = 4;
+    $maxGraphs = 8;
 
     // DEBUG SETTINGS
     // -- Should be FALSE for production level use
 
-    $cDebug = TRUE;           // Extended debug logging mode
+    $cDebug = TRUE;           // Extended debug logging mode, switch to FALSE for production environment
     $cDebugMail = FALSE;      // If TRUE, includes log in the mail message (html and plain text attachments)
     $showLog = FALSE;         // Display the log - !!! only use in combination with CLI mode !!!
 
@@ -90,11 +104,16 @@
 
     // INCLUDE REQUIRED LIBRARIES (Composer)
     // (configure at same location as the script is running or load in your own central library)
+    // -- phpmailer/phpmailer           https://github.com/PHPMailer/PHPMailer
     // -- swiftmailer/swiftmailer       https://swiftmailer.symfony.com/docs/introduction.html
     // -- twig/twig                     https://twig.symfony.com/doc/3.x/templates.html
 
     // Change only required if you decide to use a local/central library, otherwise leave as is
     include(getcwd().'/vendor/autoload.php');
+
+    use PHPMailer\PHPMailer\PHPMailer;
+    use PHPMailer\PHPMailer\SMTP;
+    use PHPMailer\PHPMailer\Exception;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,8 +277,12 @@
 
         curl_close($ch);
 
-        // Delete cookie
-        unlink($filename_cookie);
+        // Delete cookie (if exists)
+        if (file_exists($filename_cookie))
+        {
+            unlink($filename_cookie);
+            _log('- Removed cookie '.$filename_cookie);
+        }
 
         // Write file
         $fp = fopen($image_name, 'w');
@@ -515,9 +538,6 @@
     // --- CHECK AND SET P_ VARIABLES ---
     // FROM POST OR CLI DATA
 
-//    if (!isset($problemData['itemId'])) { echo "Missing ITEM ID?\n"; die; }
-//    $p_itemId = intval($problemData['itemId']);
-
     if (!isset($problemData['eventId'])) { echo "Missing EVENT ID?\n"; die; }
     $p_eventId = intval($problemData['eventId']);
 
@@ -561,10 +581,6 @@
 
     $p_smtp_port = 25;
     if (isset($config['smtp_port'])) { $p_smtp_port = $config['smtp_port']; }
-
-    $p_smtp_transport = 'none';
-    if ((isset($config['smtp_transport'])) && ($config['smtp_transport']=='tls')) { $p_smtp_transport = 'tls'; }
-    if ((isset($config['smtp_transport'])) && ($config['smtp_transport']=='ssl')) { $p_smtp_transport = 'ssl'; }
 
     $p_smtp_strict = 'yes';
     if ((isset($config['smtp_strict'])) && ($config['smtp_strict']=='no')) { $p_smtp_strict = 'no'; }
@@ -612,7 +628,7 @@
     }
 
     // Mail sender
-    $mailFrom = array($config['mail_from']=>'Zabbix Mailgraph');
+    $mailFrom = $config['mail_from'];
 
     // Derived variables - do not change!
     $z_server = $p_URL;                             // Zabbix server URL from config
@@ -664,6 +680,23 @@
     }
 
     _log('> Token = '.$token);
+
+    // -----------------------
+    // --- LOG API VERSION ---
+    // -----------------------
+
+    _log('# Record Zabbix API version');
+
+    $request = array('jsonrpc'=>'2.0',
+                     'method'=>'apiinfo.version',
+                     'params'=>[],
+                     'id'=>nextRequestID());
+
+    $result = postJSON($z_url_api, $request);
+
+    $apiVersion = $result['result'];
+
+    _log('> API version '.$apiVersion);
 
     // -----------------------------------
     // --- IF NO EVENT ID FETCH LATEST ---
@@ -1195,7 +1228,7 @@
         }
     }
 
-    // Strip off any excessive elements from the end
+    // Strip off any excessive elements from the end (protection of graph generation overload on system)
 
     while (sizeof($p_periods)>$maxGraphs) { array_pop($p_periods); }
     while (sizeof($p_periods_headers)>$maxGraphs) { array_pop($p_periods_headers); }
@@ -1247,6 +1280,7 @@
             $graphFiles[] = $graphFile;
 
             $mailData['GRAPHS_I'][$aKey]['PATH'] = $z_images_path . $graphFile;
+            $mailData['GRAPHS_I'][$aKey]['CID'] = 'images/'.$graphFile;
             $mailData['GRAPHS_I'][$aKey]['URL'] = $z_url_image . $graphFile;
             $mailData['GRAPHS_I'][$aKey]['HEADER'] = $p_periods_headers[$aKey];
         }
@@ -1277,6 +1311,7 @@
 
             $mailData['GRAPHS_'.$varName][$aKey]['URL'] = $z_url_image . $graphFile;
             $mailData['GRAPHS_'.$varName][$aKey]['PATH'] = $z_images_path . $graphFile;
+            $mailData['GRAPHS_'.$varName][$aKey]['CID'] = 'images/'.$graphFile;
         }
 
         $mailData['GRAPHS_'.$varName.'_LINK'] = $z_server.'screens.php?elementid='.$info[0]['screen']['screenid'];
@@ -1346,135 +1381,114 @@
     // Compose & Send Message ///////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    _log('# Setting up mailer');
+    _log('# Configuring Mailer');
 
-    // Do we need TLS or SSL?
+    $mail = new PHPMailer(true);
 
-    if (($p_smtp_transport=='tls') || ($p_smtp_transport=='ssl'))
+    try
     {
-        $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port, $p_smtp_transport));
+        $mail->SMTPDebug = 0;
 
+        $mail->isSMTP();
+        $mail->Host = $p_smtp_server;
+        $mail->Port = $p_smtp_port;
+
+        // --- Authentication required?
+        if ($p_smtp_username!="")
+        {
+            $mail->SMTPAuth = true;
+            $mail->Username = $p_smtp_username;
+            $mail->Password = $p_smtp_password;
+        }
+
+        // --- Disable strict certificate checking?
         if ($p_smtp_strict=='no')
         {
-            if ($transport instanceof \Swift_Transport_EsmtpTransport)
+            $mail->SMTPOptions = [
+                'ssl' => [ 'verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true ]
+            ];
+        }
+
+        // --- Define from and recipient
+        $mail->setFrom($mailFrom, 'mailGraph');
+        $mail->addAddress($p_recipient);
+
+        // --- Prepare embedding of the graphs by attaching and generating "cid" (content-id) information
+        function embedGraphs($graphs,$varName,$type)
+        {
+            global $mail;
+            global $mailData;
+
+            foreach($graphs as $aKey=>$anItem)
             {
-                $transport->setStreamOptions([
-                    'ssl' => ['allow_self_signed' => true,
-                              'verify_peer' => false,
-                              'verify_peer_name' => false]
-                    ]);
+                $mail->AddEmbeddedImage($mailData['GRAPHS_'.$varName][$aKey]['PATH'],
+                                        $mailData['GRAPHS_'.$varName][$aKey]['CID']);
+
+                // Add content-id marker to the identifier for ease of use in Twig
+                $mailData['GRAPHS_'.$varName][$aKey]['CID'] = 'cid:'.$mailData['GRAPHS_'.$varName][$aKey]['CID'];
+
+                _log('> Embedded graph image ('.$type.') '.$mailData['GRAPHS_'.$varName][$aKey]['URL']);
             }
         }
-        else
+
+        embedGraphs($graphFiles,'I','ITEM');
+        embedGraphs($triggerGraphs,'T','TRIGGER');
+        embedGraphs($hostGraphs,'H','HOST');
+
+        // --- Render the content with TWIG for HTML, Plain text and the Subject of the message
+        $loader = new \Twig\Loader\ArrayLoader([
+            'html' => file_get_contents($z_template_path.'html.template'),
+            'plain' => file_get_contents($z_template_path.'plain.template'),
+            'subject' => $mailData['SUBJECT'],
+        ]);
+
+        $twig = new \Twig\Environment($loader);
+
+        $bodyHTML = $twig->render('html', $mailData);
+        $bodyPlain = $twig->render('plain', $mailData);
+        $mailSubject = $twig->render('subject', $mailData);
+
+        // --- Attach debug log processing?
+        if (($cDebugMail) || (isset($problemData['debug'])))
         {
-            if ($transport instanceof \Swift_Transport_EsmtpTransport)
-            {
-                $transport->setStreamOptions([
-                    'ssl' => ['allow_self_signed' => false,
-                              'verify_peer' => true,
-                              'verify_peer_name' => true]
-                ]);
-            }
+            _log('# Attaching logs to mail message');
+
+            $mail->addStringAttachment($mailData['LOG_HTML'],'log.html');
+            $mail->addStringAttachment($mailData['LOG_PLAIN'],'log.txt');
         }
-    }
-    else
-    {
-        $transport = (new Swift_SmtpTransport($p_smtp_server, $p_smtp_port));
-    }
 
-    // Username/password?
+        // ---Fill body and subject and mark as HTML while also supplying plain text option alternative
+        // Note: Not using PHPMailer option for automatic text/plain generation (by design)
+        $mail->Body = $bodyHTML;
+        $mail->isHTML(true);
+        $mail->AltBody = $bodyPlain;
+        $mail->Subject = $mailSubject;
 
-    if ($p_smtp_username!='') { $transport->setUsername($p_smtp_username); }
-    if ($p_smtp_password!='') { $transport->setPassword($p_smtp_password); }
-
-    // Start actual mail(er)
-
-    $mailer = new Swift_Mailer($transport);
-
-    $message = (new Swift_Message());
-
-    // --- Fetch mailer ID from this message (no Swift function available for it ...)
-    // --- "Message-ID: <...id...@swift.generated>"
-
-    $content = $message->toString();
-    $lines = explode(chr(10),$content);
-    $firstLine = $lines[0];
-    $idParts = explode(' ',$firstLine);
-    $messageId = substr($idParts[1],1,-2);
-
-    _log('# Message ID = '.$messageId);
-
-    // Build parts for HTML and PLAIN
-
-    _log('# Processing templates');
-    _log('+ '.$z_template_path.'html.template');
-    _log('+ '.$z_template_path.'plain.template');
-
-    $loader = new \Twig\Loader\ArrayLoader([
-        'html' => file_get_contents($z_template_path.'html.template'),
-        'plain' => file_get_contents($z_template_path.'plain.template'),
-        'subject' => $mailData['SUBJECT'],
-    ]);
-
-    $twig = new \Twig\Environment($loader);
-
-    // --- Embed the images
-
-    function embedGraphs($graphs,$varName,$type)
-    {
-        global $message;
-        global $mailData;
-
-        foreach($graphs as $aKey=>$anItem)
+        // --- Send the message
+        if (!$mail->send())
         {
-            $mailData['GRAPHS_'.$varName][$aKey]['CID'] = $message->embed(Swift_Image::fromPath($mailData['GRAPHS_'.$varName][$aKey]['PATH']));
-            _log('> Embedded graph image ('.$type.') '.$mailData['GRAPHS_'.$varName][$aKey]['PATH']);
+            _log("! Failed to send mail message");
+            echo "! Failed to send mail message. Likely an issue with the recipient email address?".$cCRLF;
+            echo "+ Mailer error: ".$mail->ErrorInfo.$cCRLF;
         }
-    }
 
-    embedGraphs($graphFiles,'I','ITEM');
-    embedGraphs($triggerGraphs,'T','TRIGGER');
-    embedGraphs($hostGraphs,'H','HOST');
+        // --- Obtain message ID
+        $messageId = $mail->getlastMessageID();
+        _log('# Message ID = '.$messageId);
 
-    // --- Render the content
-
-    $bodyHTML = $twig->render('html', $mailData);
-    $bodyPlain = $twig->render('plain', $mailData);
-    $mailSubject = $twig->render('subject', $mailData);
-
-    // Prepare message
-
-    $message->setSubject($mailSubject)
-            ->setFrom($mailFrom)
-            ->setTo($p_recipient)
-            ->setBody($bodyHTML, 'text/html')
-            ->addPart($bodyPlain, 'text/plain');
-
-    if (($cDebugMail) || (isset($problemData['debug'])))
-    {
-        _log('# Attaching logs to mail message');
-
-        $attachLogHTML = new Swift_Attachment($mailData['LOG_HTML'], 'log.html', 'text/html');
-        $message->attach($attachLogHTML);
-
-        $attachLogPlain = new Swift_Attachment($mailData['LOG_PLAIN'], 'log.txt', '/text/plain');
-        $message->attach($attachLogPlain);
-    }
-
-    // Send message
-
-    $result = $mailer->send($message);
-
-    // Return Event TAG information for Zabbix
-
-    $response = array('messageId'=>$messageId);
-
-    if ($response=="")
-    {
-        _log("! Failed to send mail message");
-        echo "! Failed to send mail message. Likely an issue with the recipient email address?".$cCRLF;
-    } else {
+        // --- Return Event TAG information for Zabbix to store with Zabbix event
+        $response = array('messageId'=>$messageId);
         echo json_encode($response).$cCRLF;
+    } catch (phpmailerException $e)
+    {
+       echo "! Failed to send message".$cCRLF;
+       echo "! phpMailer error message: ".$e->getMessage().$cCRLF;
+       _log("! phpMailer failed: ".$e->getMessage());
+    } catch (Exception $e)
+    {
+       echo "! Failed to send message".$cCRLF;
+       echo "! Error message: ".$e->getMessage().$cCRLF;
+       _log("! Failed: ".$e->getMessage());
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1485,14 +1499,16 @@
 
     if (($cDebug) || (isset($problemData['debug'])))
     {
+        // Prevent duplicate dump of log information
         unset($mailData['LOG_HTML']);
         unset($mailData['LOG_PLAIN']);
 
+        // Attach the collected information
         $content = implode(chr(10),$logging).$cCRLF.$cCRLF.'=== VALUES AVAILABLE FOR TWIG TEMPLATE ==='.$cCRLF.$cCRLF.json_encode($mailData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK);
         $content = str_replace(chr(13),'',$content);
 
+        // Save to unique log file
         $logName = 'log.'.$p_eventId.'.'.date('YmdHis').'.dump';
-
         file_put_contents($z_log_path.$logName,$content);
         _log('= Log stored to '.$z_log_path.$logName);
     }

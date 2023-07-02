@@ -1,4 +1,4 @@
-// mailGraph v2.11
+// mailGraph v2.12
 try {
     // Pickup parameters
     params = JSON.parse(value),
