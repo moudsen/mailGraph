@@ -9,7 +9,7 @@
             <parameters>
                 <parameter>
                     <name>baseURL</name>
-                    <value>https://zbx.puzzl.nl/zabbix/</value>
+                    <value>https://myzabbix.example.com/</value>
                 </parameter>
                 <parameter>
                     <name>duration</name>
@@ -61,7 +61,7 @@
                 </parameter>
                 <parameter>
                     <name>URL</name>
-                    <value>https://zbx.puzzl.nl/mailGraph.php</value>
+                    <value>https://myzabbix.example.com/mailGraph.php</value>
                 </parameter>
             </parameters>
             <script>// mailGraph v2.11
