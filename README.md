@@ -7,6 +7,7 @@ To facilitate in a very flexible way to setup and format messages including the 
 The below message is just an example of what MailGraph is capable of. The template engine in Twig allows for a fully customized message creation to your needs! It is also possible to add more Zabbix fields as any field is passed to Twig when accessible in Zabbix through the macro mechanism. Example: `{ITEM.ID}`.
 
 Example message:
+
 [![](images/Example-mail-message-v122.png?raw=true)](images/Example-mail-message-v122.png)
 
 mailGraph is capable of adding several series of graphs into a single message delivering a unique experience when and how groups of graph images per the requested periods of time are added.
