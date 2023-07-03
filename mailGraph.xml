@@ -64,7 +64,7 @@
                     <value>https://myzabbix.example.com/mailGraph.php</value>
                 </parameter>
             </parameters>
-            <script>// mailGraph v2.12
+            <script>// mailGraph v2.13
 try {
     // Pickup parameters
     params = JSON.parse(value),

@@ -20,6 +20,17 @@ More information can be found in the Wiki.
 ## Installation ##
 Please refer to the Wiki how to get mailGraph installed and configured on your system.
 
+## mailGraph v2.13 release ##
+_(2023/07/03)_
+
+_This version has been verified with Zabbix 5.4 and 6.0 LTS and is expected to work with 6.4 and later (based on v2.10 testing)_
+
+Release notes
+- Fixed references into Zabbix
+  - Trigger was missing "context" parameter
+  - Item was missing "context" parameter
+  - Problems reference to this host was not generated at all
+
 ## mailGraph v2.12 release ##
 _(2023/07/02)_
 
