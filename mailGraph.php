@@ -55,6 +55,8 @@
     // 2.13 2023/07/03 - Mark Oudsen - Bugfixes speciifally on links into Zabbix (missing context or info)
     // 2.14 2023/07/10 - Mark Oudsen - Adding ability to set 'From'  and 'ReplyTo' addresses in configuration
     //                                 Adding ACK_URL for utilization in the template to point to Ack page
+    //                                 Small refactor on itemId variable processing (no longer mandatory)
+    //                                 Additional logic added to random eventId to explain in case of issues
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -490,16 +492,17 @@
             _log('<<< mailGraph '.$cVersion.' >>>');
             _log('# Invoked from CLI');
 
-            // Assumes that config.json file has the correct information
+            // Assumes that config.json file has the correct information for MANDATORY information
 
             // MANDATORY
-            $problemData['itemId'] = $config['cli_itemId'];
-            $problemData['eventId'] = $config['cli_eventId'];
+            $problemData['eventId'] = 0;
+
             $problemData['recipient'] = $config['cli_recipient'];
             $problemData['baseURL'] = $config['cli_baseURL'];
             $problemData['duration'] = $config['cli_duration'];
 
             // OPTIONAL
+            if (isset($config['cli_eventId'])) { $problemData['eventId'] = $config['cli_eventId']; }
             if (isset($config['cli_subject'])) { $problemData['subject'] = $config['cli_subject']; }
             if (isset($config['cli_period'])) { $problemData['period'] = $config['cli_period']; }
             if (isset($config['cli_period_header'])) { $problemData['period_header'] = $config['cli_period_header']; }
@@ -507,6 +510,10 @@
             if (isset($config['cli_periods_headers'])) { $problemData['periods_headers'] = $config['cli_periods_headers']; }
             if (isset($config['cli_debug'])) { $problemData['debug'] = $config['cli_debug']; }
             if (isset($config['cli_proxy'])) { $problemData['HTTPProxy'] = $config['cli_proxy']; }
+
+            // BACKWARDS COMPATIBILITY - obsolete from Zabbix 6.2 onwards
+            $problemData['itemId'] = 0;
+            if (isset($config['cli_itemId'])) { $problemData['itemId'] = $config['cli_itemId']; }
         }
 
         if (($argc>1) && ($argv[1]=='cleanup'))
@@ -736,9 +743,29 @@
                          'id'=>nextRequestID());
 
         $thisProblems = postJSON($z_url_api, $request);
-        _log('> Problem data'.$cCRLF.json_encode($thisProblems,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+        _log('> Problem data (recent)'.$cCRLF.json_encode($thisProblems,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
-        if (!isset($thisProblems['result'][0])) { echo '! No response data received?'.$cCRLF; die; }
+        if (!isset($thisProblems['result'][0]))
+        {
+            _log('- No response data received. Retrying with less recent problems ... ');
+
+            $request = array('jsonrpc'=>'2.0',
+                             'method'=>'problem.get',
+                             'params'=>array('output'=>'extend',
+                                             'recent'=>'false',
+                                             'limit'=>1),
+                             'auth'=>$token,
+                             'id'=>nextRequestID());
+
+            $thisProblems = postJSON($z_url_api, $request);
+            _log('> Problem data (not recent)'.$cCRLF.json_encode($thisProblems,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+
+            if (!isset($thisProblems['result'][0]))
+            {
+                _log('! Cannot continue: mailGraph is unable to pick a random event via the Zabbix API. It is highly likely that no active problems exist? Please retry or determine and set an event ID manually and retry.');
+                die;
+            }
+        }
 
         $p_eventId = $thisProblems['result'][0]['eventid'];
         _log('> Picked up random last event #'.$p_eventId);
@@ -886,6 +913,7 @@
         }
     }
 
+    // If no specific itemId is requested take the first item found on the items list from the host
     if (!isset($p_itemId))
     {
         foreach($thisTrigger['result'][0]['functions'] as $aFunction)
