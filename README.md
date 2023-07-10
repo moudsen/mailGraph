@@ -43,6 +43,12 @@ Release notes
 - Addressed any PHP message (deprecation or error) - mailGraph debug output is now "clean" in PHP 7.4.x and PHP 8.2.x
 - Increased maximum number of graphs from 4 to 8
 
+**Please consider to move to PHPMailer as soon as possible as Swiftmailer is abandoned. Installation instructions are included on the wiki.**
+
+Principal approach: `composer require phpmailer/phpmailer`, install mailGraph v2.12 or higher.
+
+In case Swiftmailer is no longer used elsewhere you can consider to remove this package with `swiftmailer/swiftmailer`.
+
 ## mailGraph v2.11 release ##
 _(2023/07/01)_
 
