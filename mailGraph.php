@@ -53,6 +53,7 @@
     //                                 Added ability to locate latest problems for testing purposes
     // 2.12 2023/07/02 - Mark Oudsen - Replaced SwiftMailer with PHPMailer (based on AutoTLS)
     // 2.13 2023/07/03 - Mark Oudsen - Bugfixes speciifally on links into Zabbix (missing context or info)
+    // 2.14 2023/07/10 - Mark Oudsen - Adding ability to set 'From' address in configuration
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -87,7 +88,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.13';
+    $cVersion = 'v2.14';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -591,6 +592,12 @@
 
     $p_smtp_password = '';
     if (isset($config['smtp_password'])) { $p_smtp_password = $config['smtp_password']; }
+
+    $p_smtp_from_address = '';
+    if (isset($config['smtp_from_address'])) { $p_smtp_from_address = $config['smtp_from_address']; }
+
+    $p_smtp_from_name = 'mailGraph';
+    if (isset($config['smtp_from_name'])) { $p_smtp_from_name = $config['smtp_from_name']; }
 
     $p_graph_match = 'any';
     if ((isset($config['graph_match'])) && ($config['graph_match']=='exact')) { $p_graph_match = 'exact'; }
@@ -1411,8 +1418,18 @@
             ];
         }
 
-        // --- Define from and recipient
-        $mail->setFrom($mailFrom, 'mailGraph');
+        // --- Define from
+        if ($p_smtp_from_address!='')
+        {
+            $mail->Sender = $p_smtp_from_address;
+            $mail->SetFrom($p_smtp_from_address, $p_smtp_from_name, FALSE);
+        }
+        else
+        {
+            $mail->setFrom($mailFrom, $p_smtp_from_name);
+        }
+
+        // --- Add recipient
         $mail->addAddress($p_recipient);
 
         // --- Prepare embedding of the graphs by attaching and generating "cid" (content-id) information
