@@ -1,6 +1,5 @@
 {
     "script_baseurl": "https:\/\/mydomain.com\/",
-    "cli_itemId": 0,
     "cli_triggerId": 0,
     "cli_eventId": 0,
     "cli_duration": 0,
@@ -20,9 +19,13 @@
     "smtp_server": "localhost",
     "smtp_port": 25,
     "smtp_transport": "none",
+    "smtp_from_address": "mailgraph@mydomain.com",
+    "smtp_from_name": "mailGraph",
     "smtp_strict": "yes",
     "graph_match": "any",
     "period": "20m",
     "period_header": "Last 20 minutes",
+    "retention_images": 7,
+    "retention_logs": 14,
     "debug": 0
 }
