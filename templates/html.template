@@ -124,6 +124,7 @@
 {% if GRAPH_ZABBIXLINK|length > 0 %}
                     // Graph ID: <a href="{{ GRAPH_ZABBIXLINK }}">{{ GRAPH_ID }}</a>
 {% endif %}
+                    // <a href="{{ ACK_URL }}">Ack</a>
                 </div>
             </td>
         </tr>
