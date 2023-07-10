@@ -53,7 +53,7 @@
     //                                 Added ability to locate latest problems for testing purposes
     // 2.12 2023/07/02 - Mark Oudsen - Replaced SwiftMailer with PHPMailer (based on AutoTLS)
     // 2.13 2023/07/03 - Mark Oudsen - Bugfixes speciifally on links into Zabbix (missing context or info)
-    // 2.14 2023/07/10 - Mark Oudsen - Adding ability to set 'From' address in configuration
+    // 2.14 2023/07/10 - Mark Oudsen - Adding ability to set 'From' address details in configuration
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
