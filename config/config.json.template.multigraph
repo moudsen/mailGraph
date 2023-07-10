@@ -20,6 +20,8 @@
     "smtp_strict": "yes",
     "smtp_from_address": "mailgraph@mydomain.com",
     "smtp_from_name": "mailGraph",
+    "smtp_reply_address": "feedback@mydomain.com",
+    "smtp_from_name": "mailGraph response mailbox",
     "graph_match": "any",
     "periods": "10m,4h,2d,7d",
     "periods_headers": "Last 10 minutes,Last 4 hours,Last 2 days,Last 7 days",

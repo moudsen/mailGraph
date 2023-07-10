@@ -53,7 +53,8 @@
     //                                 Added ability to locate latest problems for testing purposes
     // 2.12 2023/07/02 - Mark Oudsen - Replaced SwiftMailer with PHPMailer (based on AutoTLS)
     // 2.13 2023/07/03 - Mark Oudsen - Bugfixes speciifally on links into Zabbix (missing context or info)
-    // 2.14 2023/07/10 - Mark Oudsen - Adding ability to set 'From' address in configuration
+    // 2.14 2023/07/10 - Mark Oudsen - Adding ability to set 'From'  and 'ReplyTo' addresses in configuration
+    //                                 Adding ACK_URL for utilization in the template to point to Ack page
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -598,6 +599,12 @@
 
     $p_smtp_from_name = 'mailGraph';
     if (isset($config['smtp_from_name'])) { $p_smtp_from_name = $config['smtp_from_name']; }
+
+    $p_smtp_reply_address = '';
+    if (isset($config['smtp_reply_address'])) { $p_smtp_reply_address = $config['smtp_reply_address']; }
+
+    $p_smtp_reply_name = 'mailGraph feedback';
+    if (isset($config['smtp_reply_name'])) { $p_smtp_reply_name = $config['smtp_reply_name']; }
 
     // >>> Backwards compatibility but smtp_from_address is leading (<v2.14)
     $mailFrom = '';
@@ -1387,6 +1394,7 @@
     $mailData['TRIGGER_URL'] = $z_server.'triggers.php?form=update&triggerid='.$mailData['TRIGGER_ID'].'&context=host';
     $mailData['ITEM_URL'] = $z_server.'items.php?form=update&hostid='.$mailData['HOST_ID'].'&itemid='.$mailData['ITEM_ID'].'&context=host';
     $mailData['HOST_URL'] = $z_server.'hosts.php?form=update&hostid='.$mailData['HOST_ID'];
+    $mailData['ACK_URL'] = $z_server.'zabbix.php?action=popup&popup_action=acknowledge.edit&eventids[]='.$mailData['EVENT_ID'];
     $mailData['EVENTDETAILS_URL'] = $z_server.'tr_events.php?triggerid='.$mailData['TRIGGER_ID'].'&eventid='.$mailData['EVENT_ID'];
 
     $mailData['EVENT_DURATION'] = $p_duration;
@@ -1427,6 +1435,13 @@
         // --- Define from
         $mail->Sender = $p_smtp_from_address;
         $mail->SetFrom($p_smtp_from_address, $p_smtp_from_name, FALSE);
+
+        // --- Define reply-to
+        if ($p_smtp_reply_address!='')
+        {
+            $mail->clearReplyTos();
+            $mail->addReplyTo($p_smtp_reply_address, $p_smtp_reply_name);
+        }
 
         // --- Add recipient
         $mail->addAddress($p_recipient);
