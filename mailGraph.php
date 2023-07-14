@@ -57,6 +57,7 @@
     //                                 Adding ACK_URL for utilization in the template to point to Ack page
     //                                 Small refactor on itemId variable processing (no longer mandatory)
     //                                 Additional logic added to random eventId to explain in case of issues
+    //                                 Fixed missing flag for fetching web url related items
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -638,6 +639,19 @@
     $z_tmp_cookies = $z_path.'tmp/';
     $z_log_path = $z_path.'log/';
 
+    // If tmp or log does not exist, create them
+    if (!is_dir($z_tmp_cookies))
+    {
+        mkdir($z_tmp_cookies);
+        _log('+ created TMP directory "'.$z_tmp_cookies.'"');
+    }
+
+    if (!is_dir($z_log_path))
+    {
+        mkdir($z_log_path);
+        _log('+ created LOG directory "'.$z_log_path.'"');
+    }
+
     // Zabbix user (requires Super Admin access rights to access image generator script)
     $z_user = $config['zabbix_user'];
     $z_pass = $config['zabbix_user_pwd'];
@@ -933,7 +947,8 @@
     $request = array('jsonrpc'=>'2.0',
                      'method'=>'item.get',
                      'params'=>array('itemids'=>$p_itemId,
-                     'output'=>'extend'),
+                         'webitems'=>'true',
+                         'output'=>'extend'),
                      'auth'=>$token,
                      'id'=>nextRequestID());
 
@@ -1407,7 +1422,10 @@
     $mailData['LOG_HTML'] = str_replace($cCRLF,'<br/>',$mailData['LOG_HTML']);
     $mailData['LOG_HTML'] = str_replace('<br/>','<br/>'.$cCRLF,$mailData['LOG_HTML']);
 
-    $mailData['LOG_HTML'] = '<html lang="en"><head><meta http-equiv=Content-Type content="text/html; charset=UTF-8">'.$cCRLF.
+    $mailData['LOG_HTML'] = '<html lang="en"><head><meta http-equiv=Content-Type content="text/html; charset=UTF-8"></head>'.$cCRLF.
+                            '<style type="text/css">'.$cCRLF.
+                            'body { font-family: courier, courier new, serif; font-size: 12px; }'.$cCRLF.
+                            '</style>'.$cCRLF.
                             '<body>'.$cCRLF.
                             $mailData['LOG_HTML'].$cCRLF.
                             '</body>'.$cCRLF.

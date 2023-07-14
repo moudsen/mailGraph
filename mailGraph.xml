@@ -36,10 +36,6 @@
                     <value>Test</value>
                 </parameter>
                 <parameter>
-                    <name>itemId</name>
-                    <value>{ITEM.ID}</value>
-                </parameter>
-                <parameter>
                     <name>periods</name>
                     <value>10m,4h,1d,7d</value>
                 </parameter>
@@ -64,7 +60,7 @@
                     <value>https://myzabbix.example.com/mailGraph.php</value>
                 </parameter>
             </parameters>
-            <script>// mailGraph v2.13
+            <script>// mailGraph v2.14
 try {
     // Pickup parameters
     params = JSON.parse(value),
@@ -82,7 +78,7 @@ try {
     // Declare output type
     req.addHeader('Content-Type: application/json');
 
-    // Must have fields
+    // Pick up relevant fields for mailGraph API level call
     fields.itemId = params.itemId * 1;
     fields.eventId = params.eventId * 1;
     fields.recipient = params.recipient;

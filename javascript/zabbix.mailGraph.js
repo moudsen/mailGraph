@@ -1,4 +1,4 @@
-// mailGraph v2.13
+// mailGraph v2.14
 try {
     // Pickup parameters
     params = JSON.parse(value),
@@ -16,7 +16,7 @@ try {
     // Declare output type
     req.addHeader('Content-Type: application/json');
 
-    // Must have fields
+    // Pick up fields relevant for mailGraph API level call
     fields.itemId = params.itemId * 1;
     fields.eventId = params.eventId * 1;
     fields.recipient = params.recipient;
