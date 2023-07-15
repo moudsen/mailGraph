@@ -110,6 +110,10 @@ _(2023/06/29)_
 Zabbix 6.4.x verification is in progress. Required intermediate release to fix one major issue (Zabbix login parameters deprecation) and some minor coding updates.
 Expect to continue with automatic configuration within the next 2 months.
 
+## Special thank you ##
+I would like to express my gratitude to the following people that have actively contributed to bring bugs and improvements to my attention:
+- [pqvindesland](https://github.com/pqvindesland)
+
 ## IMPORTANT NOTE for users of mailGraph v1 and Zabbix versions under 5.4 ##
 As a result of a major functional change in Zabbix 5.4 (Screens no longer exist and are all moved into Dashboards) the mailGraph.screen macro no longer functions under Zabbix 5.4+. A code rewrite is in progress to deal with detecting the Zabbix version and to pick dashboard.get instead of screen.get as a source list for the graphs that should be included in the mail message.
 
