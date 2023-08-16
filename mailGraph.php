@@ -60,6 +60,7 @@
     //                                 Fixed missing flag for fetching web url related items
     // 2.15 2023/08/16 - Mark Oudsen - Bugfix for Zabbix 5.4 where empty or zeroed variables are no longer
     //                                 passed by Zabbix (hence resulting in weird errors)
+    // 2.16 2023/08/16 - Mark Oudsen - Adding ability to use ACKNOWLEDGE messages in the mail message
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -94,7 +95,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.15';
+    $cVersion = 'v2.16';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -463,6 +464,44 @@
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Zabbix translator functions
+
+    function zabbixTStoString($linuxTime)
+    {
+        return date("Y-m-d H:i:s", $linuxTime);
+    }
+
+    function zabbixActionToString($actionMask)
+    {
+        $values = [];
+
+        if ($actionMask & 1) { $values[] = "Close problem"; }
+        if ($actionMask & 2) { $values[] = "Acknowledge event"; }
+        if ($actionMask & 4) { $values[] = "Add message"; }
+        if ($actionMask & 8) { $values[] = "Change severity"; }
+        if ($actionMask & 16) { $values[] = "Unacknowledge event"; }
+        if ($actionMask & 32) { $values[] = "Suppress event"; }
+        if ($actionMask & 64) { $values[] = "Unsuppress event"; }
+        if ($actionMask & 128) { $values[] = "Change event rank to cause"; }
+        if ($actionMask & 256) { $values[] = "Change event rank to sympton"; }
+
+        return implode(", ", $values);
+    }
+
+    function zabbixSeverityToString($severity)
+    {
+        switch ($severity) {
+            case 0: return('Not classified');
+            case 1: return('Information');
+            case 2: return('Warning');
+            case 3: return('Average');
+            case 4: return('High');
+            case 5: return('Disaster');
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -801,7 +840,8 @@
                      'params'=>array('eventids'=>$p_eventId,
                                      'output'=>'extend',
                                      'selectRelatedObject'=>'extend',
-                                     'selectSuppressionData'=>'extend'),
+                                     'selectSuppressionData'=>'extend',
+                                     'select_acknowledges'=>'extend'),
                      'auth'=>$token,
                      'id'=>nextRequestID());
 
@@ -828,6 +868,17 @@
                 $mailData['EVENT_SEVERITY'] = $_severity[$thisEvent['result'][0]['severity']];
                 $mailData['EVENT_STATUS'] = 'Triggered/Active';
                 break;
+    }
+
+    // --- Collect and attach acknowledge messages for this event
+    if (sizeof($thisEvent['result'][0]['acknowledges']>0)) {
+        foreach($thisEvent['result'][0]['acknowledges'] as $aCount=>$anAck) {
+            $mailData['ACKNOWLEDGES'][$aCount] = $anAck;
+            $mailData['ACKNOWLEDGES'][$aCount]['_clock'] = zabbixTStoString($anAck['clock']);
+            $mailData['ACKNOWLEDGES'][$aCount]['_actions'] = zabbixActionToString($anAck['action']);
+            $mailData['ACKNOWLEDGES'][$aCount]['_old_severity'] = zabbixSeverityToString($anAck['old_severity']);
+            $mailData['ACKNOWLEDGES'][$aCount]['_new_severity'] = zabbixSeverityToString($anAck['new_severity']);
+        }
     }
 
     $p_triggerId = $thisEvent['result'][0]['relatedObject']['triggerid'];

@@ -20,14 +20,22 @@ More information can be found in the Wiki.
 ## Installation ##
 Please refer to the Wiki how to get mailGraph installed and configured on your system.
 
+## mailGraph v2.16 release ##
+_(2023/08/16)_
+
+_This version has been verified with Zabbix 5.4 and 6.0 LTS and is expected to work with 6.4 and later (based on v2.10 testing)_
+
+Release notes
+- Adding [ACKNOWLEDGES] message information for processing in the TWIG template to allow inclusion of "Action" information in the mail messages (eg. who acknowledged/changed problem status). Refer to the Wiki "Templates" section for more detailed information.
+
 ## mailGraph v2.15 release ##
 _(2023/08/16)_
 
 _This version has been verified with Zabbix 5.4 and 6.0 LTS and is expected to work with 6.4 and later (based on v2.10 testing)_
 
 Release notes
-- Fixed new error condition found in Zabbix 5.4.12 where zeroed or blank parameters for a webhook are no longer added as parameters in the Javascript.
-- Refactored error handling inside the Javascript to distinguish automatically between 'email ID response' or a debug or warning level message (this prevents the code of throwing an unknown error like 'Invalid JSON').
+- Fixed issue with Zabbix 5.4.12 where parameters that are blank or zero did no longer get passed to the Javascript hence causing basic checks to fail. Javascript and parameter checks in mailGraph.php have been adjusted and optimized.
+- Refactored the Javascript error handling to get rid of the "Invalid JSON offset" message and to deal with individual error conditions while presenting a better error message on the root cause of the concerning issue.
 
 ## mailGraph v2.14 release ##
 _(2023/07/10)_

@@ -1,4 +1,4 @@
-// mailGraph v2.15
+// mailGraph v2.16
 
 // Function to test string
 function isJSON(str) {

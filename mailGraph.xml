@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>5.4</version>
-    <date>2023-08-16T12:05:37Z</date>
+    <date>2023-08-16T20:38:38Z</date>
     <media_types>
         <media_type>
             <name>MailGraph</name>
@@ -60,7 +60,7 @@
                     <value>https://myzabbix.com/mailGraph.php</value>
                 </parameter>
             </parameters>
-            <script>// mailGraph v2.15
+            <script>// mailGraph v2.16
 
 // Function to test string
 function isJSON(str) {
@@ -213,4 +213,3 @@ Trigger ID: {TRIGGER.ID}</message>
         </media_type>
     </media_types>
 </zabbix_export>
-

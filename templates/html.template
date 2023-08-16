@@ -81,6 +81,9 @@
     .content {
         font-size: 14px;
     }
+    .acknowledge {
+        font-size: 10px;
+    }
 </style>
 </head>
 <body>
@@ -112,6 +115,18 @@
                         </td>
                     </tr>
                 </table>
+{% if ACKNOWLEDGES|length > 0 %}
+                <br/>
+{% for anAck in ACKNOWLEDGES %}
+                <table style="border:0; text-align:left;" cellpadding="5" cellspacing="0">
+                    <tr>
+                        <td class="acknowledge">
+                            <b>{{ anAck._clock }}</b><br/><em>({{ anAck.username }}, {{ anAck.name }} {{ anAck.surname }})</em><br/>[{{ anAck._actions }}]<br/>{{ anAck.message }}
+                        </td>
+                    </tr>
+                </table>
+{% endfor %}
+{% endif %}
             </td>
         </tr>
         <tr>
@@ -120,11 +135,12 @@
                     Event ID: <a href="{{ EVENTDETAILS_URL }}">{{ EVENT_ID }}</a> //
                     Trigger ID: <a href="{{ TRIGGER_URL }}">{{ TRIGGER_ID }}</a> //
                     Item ID: <a href="{{ ITEM_URL }}">{{ ITEM_ID }}</a> //
-                    Host ID: <a href="{{ HOST_URL }}">{{ HOST_ID }}</a>
+                    Host ID: <a href="{{ HOST_URL }}">{{ HOST_ID }}</a> //
+                    <a href="{{ HOST_PROBLEMS_URL }}">Problems</a>
 {% if GRAPH_ZABBIXLINK|length > 0 %}
                     // Graph ID: <a href="{{ GRAPH_ZABBIXLINK }}">{{ GRAPH_ID }}</a>
 {% endif %}
-                    // <a href="{{ ACK_URL }}">Ack</a>
+                   // <a href="{{ ACK_URL }}">Ack</a>
                 </div>
             </td>
         </tr>
