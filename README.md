@@ -20,6 +20,15 @@ More information can be found in the Wiki.
 ## Installation ##
 Please refer to the Wiki how to get mailGraph installed and configured on your system.
 
+## mailGraph v2.15 release ##
+_(2023/08/16)_
+
+_This version has been verified with Zabbix 5.4 and 6.0 LTS and is expected to work with 6.4 and later (based on v2.10 testing)_
+
+Release notes
+- Fixed new error condition found in Zabbix 5.4.12 where zeroed or blank parameters for a webhook are no longer added as parameters in the Javascript.
+- Refactored error handling inside the Javascript to distinguish automatically between 'email ID response' or a debug or warning level message (this prevents the code of throwing an unknown error like 'Invalid JSON').
+
 ## mailGraph v2.14 release ##
 _(2023/07/10)_
 

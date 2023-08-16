@@ -58,6 +58,8 @@
     //                                 Small refactor on itemId variable processing (no longer mandatory)
     //                                 Additional logic added to random eventId to explain in case of issues
     //                                 Fixed missing flag for fetching web url related items
+    // 2.15 2023/08/16 - Mark Oudsen - Bugfix for Zabbix 5.4 where empty or zeroed variables are no longer
+    //                                 passed by Zabbix (hence resulting in weird errors)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -92,7 +94,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.14';
+    $cVersion = 'v2.15';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -495,15 +497,17 @@
 
             // Assumes that config.json file has the correct information for MANDATORY information
 
-            // MANDATORY
+            // DEFAULTS
             $problemData['eventId'] = 0;
+            $problemData['duration'] = 0;
 
+            // MANDATORY
             $problemData['recipient'] = $config['cli_recipient'];
             $problemData['baseURL'] = $config['cli_baseURL'];
-            $problemData['duration'] = $config['cli_duration'];
 
             // OPTIONAL
             if (isset($config['cli_eventId'])) { $problemData['eventId'] = $config['cli_eventId']; }
+            if (isset($config['cli_duration'])) { $problemData['duration'] = $config['cli_duration']; }
             if (isset($config['cli_subject'])) { $problemData['subject'] = $config['cli_subject']; }
             if (isset($config['cli_period'])) { $problemData['period'] = $config['cli_period']; }
             if (isset($config['cli_period_header'])) { $problemData['period_header'] = $config['cli_period_header']; }
@@ -547,6 +551,7 @@
          $cCRLF.json_encode($problemData,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- CHECK AND SET P_ VARIABLES ---
+
     // FROM POST OR CLI DATA
 
     if (!isset($problemData['eventId'])) { echo "Missing EVENT ID?\n"; die; }
@@ -555,8 +560,8 @@
     if (!isset($problemData['recipient'])) { echo "Missing RECIPIENT?\n"; die; }
     $p_recipient = $problemData['recipient'];
 
-    if (!isset($problemData['duration'])) { echo "Missing DURATION?\n"; die; }
-    $p_duration = intval($problemData['duration']);
+    $p_duration = 0;
+    if (isset($problemData['duration'])) { $p_duration = intval($problemData['duration']); }
 
     if (!isset($problemData['baseURL'])) { echo "Missing URL?\n"; die; }
     $p_URL = $problemData['baseURL'];
