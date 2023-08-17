@@ -683,7 +683,7 @@
     $z_tmp_cookies = $z_path.'tmp/';
     $z_log_path = $z_path.'log/';
 
-    // If tmp or log does not exist, create them
+    // If tmp, log, or images does not exist, create them
     if (!is_dir($z_tmp_cookies))
     {
         mkdir($z_tmp_cookies);
@@ -694,6 +694,12 @@
     {
         mkdir($z_log_path);
         _log('+ created LOG directory "'.$z_log_path.'"');
+    }
+
+    if (!is_dir($z_images_path))
+    {
+        mkdir($z_images_path);
+        _log('+ created IMAGES directory "'.$z_images_path.'"');
     }
 
     // Zabbix user (requires Super Admin access rights to access image generator script)
