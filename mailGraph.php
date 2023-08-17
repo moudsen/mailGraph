@@ -871,7 +871,7 @@
     }
 
     // --- Collect and attach acknowledge messages for this event
-    if (sizeof($thisEvent['result'][0]['acknowledges']>0)) {
+    if (isset($thisEvent['result'][0]['acknowledges'])) {
         foreach($thisEvent['result'][0]['acknowledges'] as $aCount=>$anAck) {
             $mailData['ACKNOWLEDGES'][$aCount] = $anAck;
             $mailData['ACKNOWLEDGES'][$aCount]['_clock'] = zabbixTStoString($anAck['clock']);
