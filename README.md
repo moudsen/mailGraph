@@ -10,7 +10,7 @@ Note that all Zabbix host, item or screen related information is made available 
 
 Example message:
 
-![Screenshot 2023-08-18 110118](https://github.com/moudsen/mailGraph/assets/16045332/ac346b77-1686-49b1-8819-8993a04238c6)
+![Example image](https://github.com/moudsen/mailGraph/assets/16045332/0cb671d9-464f-493b-b250-15dd550fd84a)
 
 mailGraph is capable of adding several series of graphs into a single message delivering a unique experience when and how groups of graph images per the requested periods of time are added.
 Currently mailGraph supports hosts, (one or more related) items and screens (applicable to Zabbix 5.4 only).
