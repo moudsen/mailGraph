@@ -30,8 +30,6 @@ Principal bug fixing on mailGraph v2.x (logic failure or similar) will continue 
 
 I'm open to new feature requests - please raise an issue for this in this Github space.
 
-## mailGraph v2.16 release ##
-
 ## Special thank you ##
 I would like to express my gratitude to the following people that have actively contributed to bring bugs and improvements to my attention:
 - [pqvindesland](https://github.com/pqvindesland)
