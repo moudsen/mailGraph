@@ -8,39 +8,7 @@
     // upon an alert message.
     //
     // ------------------------------------------------------------------------------------------------------
-    // Release 1 tested with Zabbix 5.4 and 6.0 LTS
-    // ------------------------------------------------------------------------------------------------------
-    // 1.00 2021/02/26 - Mark Oudsen - MVP version, ready for distribution
-    // 1.01 2021/02/27 - Mark Oudsen - Enhanced search for associated graphs to an item // bug fixes
-    // 1.10 2021/02/27 - Mark Oudsen - Moved all configuration outside code
-    // 1.11 2021/02/28 - Mark Oudsen - Bugfixes
-    // 1.12 2021/03/01 - Mark Oudsen - Bugfixes
-    //                                 Adding mail server configuration via config.json
-    // 1.13 2021/03/01 - Mark Oudsen - Added smtp options to encrypt none,ssl,tls
-    // 1.14 2021/03/01 - Mark Oudsen - Added smtp strict certificates yes|no via config.json
-    // 1.15 2021/03/01 - Mark Oudsen - Revised relevant graph locator; allowing other item graphs if current
-    //                                 item does not have a graph associated
-    // 1.16 2021/03/02 - Mark Oudsen - Found issue with graph.get not returning graphs to requested item ids
-    //                                 Workaround programmed (fetch host graphs, search for certain itemids)
-    // 1.17 2021/03/02 - Mark Oudsen - Added ability to specify period of time displayed in the graph
-    // 1.18 2021/03/04 - Mark Oudsen - Added ability to specify Tags per trigger
-    //                                 Shorten long "lastvalue" or "prevvalue"
-    // 1.19 2021/03/05 - Mark Oudsen - Added ability to pass Zabbix 'infoXXX' parameters for TWIG template
-    // 1.20 2021/03/07 - Mark Oudsen - Production level version - leaving BETA from here on ...
-    // 1.21 2021/03/09 - Mark Oudsen - Reverted graph.get code back to original code as it was not a bug but
-    //                                 a wrongly typed requested (should be ARRAY, not comma separated)!
-    // 1.22 2021/03/10 - Mark Oudsen - Added ability to embed multiple periods (1-4) of the same graph
-    // 1.23 2021/03/12 - Mark Oudsen - Added graph support for 'Stacked', 'Pie' and 'Exploded'
-    // 1.24 2021/03/12 - Mark Oudsen - Added support for HTTP proxy
-    // 1.25 2021/03/16 - Mark Oudsen - Refactoring for optimized flow and relevant data retrieval
-    // 1.26 2021/03/19 - Mark Oudsen - Bugfixes after refactor (wrong itemId and incorrect eventValue)
-    //                                 Suppressing Zabbix username-password in log
-    // 1.27 2021/03/19 - Mark Oudsen - Added ability to define "mailGraph.screen" tag to embed graphs from
-    //                                 Added PHP informational and warnings to log for easier debug/spotting
-    // 1.28 2021/03/24 - Mark Oudsen - Added ability to specify username/password for TLS/SSL
-    // 1.29 2021/04/03 - Mark Oudsen - Bugfix due to stricter JSONRPC version check since Zabbix 5.0.10
-    //      2021/07/05 - Mark Oudsen - Minor detail added: CLI debug mode now also outputs version
-    //      2021/07/07 - Mark Oudsen - Fixed HTTPProxy typo in code (instead of HTTPPRoxy)
+    // Release 1 tested with Zabbix 5.4 and 6.0 LTS (history available on GitHub)
     // ------------------------------------------------------------------------------------------------------
     // Release 2 tested with Zabbix 5.4, 6.0 LTS and 6.4 - tested with latest Composer libraries
     // ------------------------------------------------------------------------------------------------------
@@ -61,10 +29,39 @@
     // 2.15 2023/08/16 - Mark Oudsen - Bugfix for Zabbix 5.4 where empty or zeroed variables are no longer
     //                                 passed by Zabbix (hence resulting in weird errors)
     // 2.16 2023/08/16 - Mark Oudsen - Adding ability to use ACKNOWLEDGE messages in the mail message
+    // 2.17 2024/12/30 - Mark Oudsen - Fixed #47 mailData initializaton (wrong location) - BernardLinz
+    //                                 Fixed #46 invalid GraphId on trigger tag - BernardLinz
+    //                                 Fixed #44 config.json.template wrong var name - WMP
+    //                                 Fixed #45 handling of international characters - Dima-online
+    //                                 Tested with latest PHPMailer (6.9.3) and TWIG (3.11.3), PHP 7.4
+    //                                 Tested with PHP 8.3, TWIG (3.18.0)
+    // ------------------------------------------------------------------------------------------------------
+    // Release 3 placeholder for Zabbix 7.0 LTS and 7.2
+    // ------------------------------------------------------------------------------------------------------
+    // v2.17                           Testing on Zabbix 7.0 LTS (in progress), Zabbix 7.2 (in progress)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
     // MIT License
+    //
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Notes
+    // -----
+    // 1) mailGraph is following the environmental requirements from Zabbix, supporting PHP 7.4-8.3 ad per
+    //    - https://www.zabbix.com/documentation/6.0/en/manual/installation/requirements
+    //    - https://www.zabbix.com/documentation/6.4/en/manual/installation/requirements
+    //
+    // 2) TWIG 3.18.0 is available on PHP 8 only (seemless upgrade when using composer update)
+    //
+    // 3) Testing of composer libraries updates is limited to every 6 to 12 months
+    //    - In case you encounter an issue, please raise an issue on GitHub
+    //      https://github.com/moudsen/mailGraph/issues
+    //      
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,14 +85,14 @@
     // MAIN SEQUENCE
     // -------------
     // 1) Fetch trigger, item, host, graph, event information via Zabbix API via CURL
-    // 2) Fetch Graph(s) associated to the item/trigger (if any) via Zabbix URL login via CURL
-    // 3) Build and send mail message from template using Swift/TWIG
+    // 2) Fetch Graph(s) associated to the item/trigger (if any) via Zabbix URL via CURL
+    // 3) Build and send mail message from template using PHPmailer//TWIG
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.16';
+    $cVersion = 'v2.17';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -114,7 +111,6 @@
     // INCLUDE REQUIRED LIBRARIES (Composer)
     // (configure at same location as the script is running or load in your own central library)
     // -- phpmailer/phpmailer           https://github.com/PHPMailer/PHPMailer
-    // -- swiftmailer/swiftmailer       https://swiftmailer.symfony.com/docs/introduction.html
     // -- twig/twig                     https://twig.symfony.com/doc/3.x/templates.html
 
     // Change only required if you decide to use a local/central library, otherwise leave as is
@@ -513,6 +509,10 @@
     _log('# Configuration taken from config.json'.$cCRLF.
          json_encode(maskOutputFields($config),JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
+    // --- MAIL DATA ---
+
+    $mailData = array();
+
     // --- POST DATA ---
 
     // Read POST data
@@ -740,8 +740,6 @@
     // Fetch information via API ////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    $mailData = array();
-
     $mailData['BASE_URL'] = $p_URL;
     $mailData['SUBJECT'] = $p_subject;
 
@@ -877,7 +875,7 @@
     }
 
     // --- Collect and attach acknowledge messages for this event
-    if (isset($thisEvent['result'][0]['acknowledges'])) {
+    if (sizeof($thisEvent['result'][0]['acknowledges']>0)) {
         foreach($thisEvent['result'][0]['acknowledges'] as $aCount=>$anAck) {
             $mailData['ACKNOWLEDGES'][$aCount] = $anAck;
             $mailData['ACKNOWLEDGES'][$aCount]['_clock'] = zabbixTStoString($anAck['clock']);
@@ -1370,7 +1368,7 @@
     {
         if ($forceGraph>0)
         {
-            $theGraph = $forceGraphInfo;
+            $theGraph = $forceGraphInfo['result'][0];
             $theType = 'Forced';
         }
         else
@@ -1518,8 +1516,14 @@
 
     try
     {
+        // If debugging is required change to '1'
         $mail->SMTPDebug = 0;
 
+        // Initialize for international characters
+        $mail->CharSet = "UTF-8";
+        $mail->Encoding = "base64";
+
+	// Inialize SMTP parameters
         $mail->isSMTP();
         $mail->Host = $p_smtp_server;
         $mail->Port = $p_smtp_port;
