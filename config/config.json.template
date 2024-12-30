@@ -20,7 +20,7 @@
     "smtp_from_address": "mailgraph@mydomain.com",
     "smtp_from_name": "mailGraph",
     "smtp_reply_address": "feedback@mydomain.com",
-    "smtp_from_name": "mailGraph response mailbox",
+    "smtp_reply_name": "mailGraph response mailbox",
     "smtp_strict": "yes",
     "graph_match": "any",
     "period": "20m",
