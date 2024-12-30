@@ -34,6 +34,9 @@ I'm open to new feature requests - please raise an issue for this in this Github
 ## Special thank you ##
 I would like to express my gratitude to the following people that have actively contributed to bring bugs and improvements to my attention:
 - [pqvindesland](https://github.com/pqvindesland)
+- [BernardLinz](https://github.com/BernhardLinz)
+- [WMP](https://github.com/WMP)
+- [dima-online](https://github.com/dima-online)
 
 ## IMPORTANT NOTE for users of mailGraph v2 and older and Zabbix versions under 6.0 ##
 As per November 2023, mailGraph is no longer maintained for Zabbix 5 and older.
