@@ -35,10 +35,12 @@
     //                                 Fixed #45 handling of international characters - Dima-online
     //                                 Tested with latest PHPMailer (6.9.3) and TWIG (3.11.3), PHP 7.4
     //                                 Tested with PHP 8.3, TWIG (3.18.0)
+    // 2.18 2025/01/10 - Mark Oudsen - SCREEN tag information is only processed for Zabbix versions <= 5
+    //      2025/01/14 - Mark Oudsen - Fixed #51 SMTPS (implicit) or STARTTLS (explicit)
     // ------------------------------------------------------------------------------------------------------
-    // Release 3 placeholder for Zabbix 7.0 LTS and 7.2
+    // Release 3 placeholder for Zabbix 7.0 LTS and 7.2+
     // ------------------------------------------------------------------------------------------------------
-    // v2.17                           Testing on Zabbix 7.0 LTS (in progress), Zabbix 7.2 (in progress)
+    // v2.18                           Testing on Zabbix 7.0 LTS (in progress), Zabbix 7.2 (in progress)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -92,7 +94,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.17';
+    $cVersion = 'v2.18';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -640,6 +642,10 @@
     $p_smtp_strict = 'yes';
     if ((isset($config['smtp_strict'])) && ($config['smtp_strict']=='no')) { $p_smtp_strict = 'no'; }
 
+    $p_smtp_security = 'none';
+    if ((isset($config['smtp_security'])) && ($config['smtp_security']=='smtps')) { $p_smtp_security = 'smtps'; }
+    if ((isset($config['smtp_security'])) && ($config['smtp_security']=='starttls')) { $p_smtp_security = 'starttls'; }
+
     $p_smtp_username = '';
     if (isset($config['smtp_username'])) { $p_smtp_username = $config['smtp_username']; }
 
@@ -785,6 +791,7 @@
     $result = postJSON($z_url_api, $request);
 
     $apiVersion = $result['result'];
+    $apiVersionMajor = substr($apiVersion,0,01);
 
     _log('> API version '.$apiVersion);
 
@@ -971,18 +978,26 @@
                 break;
 
             case 'mailGraph.screen':
-                $triggerScreen = intval($aTag['value']);
-                _log('+ Trigger screen = '.$triggerScreen);
+		if ($apiVersionMajor<="5") {
+                    $triggerScreen = intval($aTag['value']);
+                    _log('+ Trigger screen = '.$triggerScreen);
+                } else {
+                    _log('- Trigger screen value ignored');
+                }
                 break;
 
             case 'mailGraph.screenPeriod':
-                $triggerScreenPeriod = $aTag['value'];
-                _log('+ Trigger screen period = '.$triggerScreenPeriod);
+		if ($apiVersionMajor<="5") {
+                    $triggerScreenPeriod = $aTag['value'];
+                    _log('+ Trigger screen period = '.$triggerScreenPeriod);
+                }
                 break;
 
             case 'mailGraph.screenPeriodHeader':
-                $triggerScreenPeriodHeader = $aTag['value'];
-                _log('+ Trigger screen header = '.$triggerScreenPeriodHeader);
+                if ($apiVersionMajor<="5") {
+                    $triggerScreenPeriodHeader = $aTag['value'];
+                    _log('+ Trigger screen header = '.$triggerScreenPeriodHeader);
+                }
                 break;
         }
     }
@@ -1523,10 +1538,33 @@
         $mail->CharSet = "UTF-8";
         $mail->Encoding = "base64";
 
-	// Inialize SMTP parameters
+	// --- Inialize SMTP parameters
         $mail->isSMTP();
         $mail->Host = $p_smtp_server;
         $mail->Port = $p_smtp_port;
+
+        // --- Initialize transport security
+        switch($p_smtp_security) {
+            case 'smtps':
+                _log('> Using SMTPS transport encryption method');
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                break;
+            case 'starttls':
+                _log('> Using STARTTLS transport encryption method');
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                break;
+            default:
+                _log('> Plain transport (no encryption)');
+        }
+
+        // --- Disable strict certificate checking?
+        if ($p_smtp_strict=='no')
+        {
+            _log('> No strict TLS checking');
+            $mail->SMTPOptions = [
+                'ssl' => [ 'verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true ]
+            ];
+        }
 
         // --- Authentication required?
         if ($p_smtp_username!="")
@@ -1534,14 +1572,6 @@
             $mail->SMTPAuth = true;
             $mail->Username = $p_smtp_username;
             $mail->Password = $p_smtp_password;
-        }
-
-        // --- Disable strict certificate checking?
-        if ($p_smtp_strict=='no')
-        {
-            $mail->SMTPOptions = [
-                'ssl' => [ 'verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true ]
-            ];
         }
 
         // --- Define from
@@ -1633,6 +1663,7 @@
     {
        echo "! Failed to send message".$cCRLF;
        echo "! Error message: ".$e->getMessage().$cCRLF;
+       echo "! Check your mail server and/or transport settings!".$cCRLF;
        _log("! Failed: ".$e->getMessage());
     }
 
