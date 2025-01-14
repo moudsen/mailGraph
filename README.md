@@ -37,6 +37,7 @@ I would like to express my gratitude to the following people that have actively 
 - [BernardLinz](https://github.com/BernhardLinz)
 - [WMP](https://github.com/WMP)
 - [dima-online](https://github.com/dima-online)
+- [tadeuszkura] (https://github.com/tadeuszkura)
 
 ## IMPORTANT NOTE for users of mailGraph v2 and older and Zabbix versions under 6.0 ##
 As per November 2023, mailGraph is no longer maintained for Zabbix 5 and older.
