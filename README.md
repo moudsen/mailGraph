@@ -20,6 +20,9 @@ More information can be found in the Wiki.
 ## Installation ##
 Please refer to the Wiki how to get mailGraph installed and configured on your system.
 
+## Reference websites ##
+[Extensive GERMAN installation from scratch](https://znil.net/index.php?title=Zabbix_mailGraph_installieren_-_Trigger_Alerts_Emails_mit_Grafiken) - nice work from Bernard Linz
+
 ## Announcement - Zabbix 5.x maintenance for mailGraph end-of-life - mailGraph 3.x development in progress ##
 _(2023/11/01)_
 
