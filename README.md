@@ -24,11 +24,13 @@ Please refer to the Wiki how to get mailGraph installed and configured on your s
 [Extensive GERMAN installation from scratch](https://znil.net/index.php?title=Zabbix_mailGraph_installieren_-_Trigger_Alerts_Emails_mit_Grafiken) - nice work from Bernard Linz
 
 ## Announcement - Zabbix 5.x maintenance for mailGraph end-of-life - mailGraph 3.x development in progress ##
+_(2024/01/26)_
+
+First mailGraph v3 release is underway, now supporting Zabbix 7 (in particular the new API bearer token authentication method).
+
 _(2023/11/01)_
 
 As per November 2023 the maintenance on mailGraph v2.x for Zabbix 5.x will stop in conjunction with the Zabbix lifecycle policy (https://www.zabbix.com/life_cycle_and_release_policy) as Zabbix 5 is nearing it's end of life.
-
-In conjunction mailGraph v2.x is now frozen and I'm setting up a roadmap for mailGraph v3.x starting new development in Alfa mode as November 2023. This new code is not expected to be published until start of 2024.
 
 Principal bug fixing on mailGraph v2.x (logic failure or similar) will continue but only for Zabbix 6.x onwards.
 

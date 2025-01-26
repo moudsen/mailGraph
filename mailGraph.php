@@ -37,10 +37,14 @@
     //                                 Tested with PHP 8.3, TWIG (3.18.0)
     // 2.18 2025/01/10 - Mark Oudsen - SCREEN tag information is only processed for Zabbix versions <= 5
     //      2025/01/14 - Mark Oudsen - Fixed #51 SMTPS (implicit) or STARTTLS (explicit)
+    // 2.20 2025/01/25 - Mark Oudsen - Fixed #49 to support Zabbix API bearer token (Zabbix 7.x+)
+    //                                 Added detection of php curl module (must have)
+    //                                 Fixed bug on array size determination
+    //                                 CURLOPT_BINARYTRANSFER deprecated (removed)
     // ------------------------------------------------------------------------------------------------------
     // Release 3 placeholder for Zabbix 7.0 LTS and 7.2+
     // ------------------------------------------------------------------------------------------------------
-    // v2.18                           Testing on Zabbix 7.0 LTS (in progress), Zabbix 7.2 (in progress)
+    // 2.20                            Tested in Zabbix 7.0.7 LTS and Zabbix 7.2.2
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -54,16 +58,27 @@
     //
     // Notes
     // -----
-    // 1) mailGraph is following the environmental requirements from Zabbix, supporting PHP 7.4-8.3 ad per
+    // 1) mailGraph is following the environmental requirements from Zabbix, supporting PHP 7 and 8 as per
     //    - https://www.zabbix.com/documentation/6.0/en/manual/installation/requirements
     //    - https://www.zabbix.com/documentation/6.4/en/manual/installation/requirements
+    //    - https://www.zabbix.com/documentation/7.0/en/manual/installation/requirements
+    //    - https://www.zabbix.com/documentation/7.2/en/manual/installation/requirements
     //
-    // 2) TWIG 3.18.0 is available on PHP 8 only (seemless upgrade when using composer update)
+    // 2) TWIG 3.18.0 is available on PHP 8 only
+    //    - Seemless in-place upgrade when using composer update after upgrading  PHP 7.x to PHP 8.x
     //
-    // 3) Testing of composer libraries updates is limited to every 6 to 12 months
+    // 3) Full testing of composer libraries updates/versions is limited to every 6 to 12 months
     //    - In case you encounter an issue, please raise an issue on GitHub
     //      https://github.com/moudsen/mailGraph/issues
-    //      
+    //    - Refer to the wiki for exact versions tested
+    //
+    // 4) PHP related notes
+    //    - PHP 5.4 - Limited to mailGraph v1.xx only - unsupported (end of life) - Tested - No more updates
+    //    - PHP 7.x - Limited to mailGraph v2.xx only - unsupported (end of life) - Tested - Freezing
+    //    - PHP 8.x - Supported - Tested
+    //
+    // 5) Zabbix related
+    //    - As from Zabbix 7.2 onwards the only authentication method accepted is API bearer token
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,7 +90,7 @@
     // -------
     // - Automatic setup and configuration of mailGraph
     // - Automatic code updates (CLI triggered)
-    // - Add DASHBOARD facility (SCREEN was abandoned in Zabbix 5.4
+    // - Add DASHBOARD processing facility (SCREEN was abandoned after Zabbix 5.4) [idea only]
     // - Extract Graph API functionality to seperate code unit/object
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,7 +109,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.18';
+    $cVersion = 'v2.20';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -124,7 +139,7 @@
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Fetch the HTML source of the given URL
+    // Fetch the response of the given URL
     // --- Redirects will be honored
     // --- Enforces use of IPv4
     // --- Caller must verify if the return string is JSON or ERROR
@@ -135,6 +150,7 @@
         global $cVersion;
         global $cDebug;
         global $HTTPProxy;
+        global $z_api_token;
 
         // Initialize Curl instance
         _log('% postJSON: '.$url);
@@ -143,7 +159,6 @@
         $ch = curl_init();
 
         // Set options
-
         if ((isset($HTTPProxy)) && ($HTTPProxy!=''))
         {
             if ($cDebug) { _log('% Using proxy: '.$HTTPProxy); }
@@ -153,18 +168,41 @@
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
 
+        // Set headers
+        $headers = ['Content-Type:application/json'];
+
+        // Bypass token authentication method if we are using API token method
+        if ($z_api_token != '') {
+            if ($data['method']!='apiinfo.version') {
+                $headers[] = 'Authorization: Bearer '.$z_api_token;
+
+                if ($cDebug) { _log('> Adding API bearer token'); }
+            }
+
+            if (isset($data['auth'])) {
+                unset($data['auth']);
+
+                if ($cDebug) { _log('> Cleared AUTH information'); }
+            }
+        }
+
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        // Set POST
         curl_setopt($ch, CURLOPT_POST, TRUE);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
+        // Set URL and output-to-variable option
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
+        // Set Agent name
         curl_setopt($ch, CURLOPT_USERAGENT, 'Zabbix-mailGraph - '.$cVersion);
 
         // Execute Curl
         $data = curl_exec($ch);
 
+        // Check if we have valid data
         if ($data===FALSE)
         {
             _log('! Failed: '.curl_error($ch));
@@ -201,6 +239,7 @@
         global $z_tmp_cookies;
         global $z_images_path;
         global $z_url_api;
+        global $z_api_token;
         global $cVersion;
         global $cCRLF;
         global $HTTPProxy;
@@ -237,9 +276,6 @@
                                        "&graphtype=".$graphType."&legend=".$showLegend."&profileIdx=web.graphs.filter".
                                        "&from=now-".$period."&to=now";
 
-        // Prepare POST login
-        $z_login_data  = array('name' => $z_user, 'password' => $z_pass, 'enter' => "Sign in");
-
         // Cookie and image names
         $filename_cookie = $z_tmp_cookies ."zabbix_cookie_" .$graphid . "." .$thisTime. ".txt";
         $filename = "zabbix_graph_" .$graphid . "." . $thisTime . "-" . $period . ".png";
@@ -260,9 +296,9 @@
         }
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
+        $z_login_data  = array('name' => $z_user, 'password' => $z_pass, 'enter' => "Sign in");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $z_login_data);
 
@@ -274,8 +310,9 @@
 
         if ($login!='')
         {
+            //TODO: Pick up the specific error from CURL?
             echo 'Error logging in to Zabbix!'.$cCRLF;
-            die;
+            return('');
         }
 
         // Get the graph
@@ -392,6 +429,7 @@
                 case 'zabbix_user_pwd':
                 case 'zabbix_api_user':
                 case 'zabbix_api_pwd':
+                case 'zabbix_api_token':
                     $info[$aKey] = '<masked>';
                     break;
             }
@@ -418,6 +456,7 @@
                     case 'zabbix_user_pwd':
                     case 'zabbix_api_user':
                     case 'zabbix_api_pwd':
+                    case 'zabbix_api_token':
                         if ($aValue==$infoValue) { $info[$infoKey] = '<masked>'; };
                         break;
                 }
@@ -502,6 +541,12 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize ///////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // --- CHECK CURL
+    if (!extension_loaded('curl')) {
+        _log('! mailGraph requires the php-curl module to function properly. Please install this module and retry.');
+        die;
+    }
 
     // --- CONFIG DATA ---
 
@@ -708,6 +753,13 @@
         _log('+ created IMAGES directory "'.$z_images_path.'"');
     }
 
+    // Zabbix token - if a token is defined this will be the selected login method automatically (username/password neglected)
+    $z_api_token = '';
+
+    if (isset($config['zabbix_api_token'])) {
+      $z_api_token = $config['zabbix_api_token'];
+    }
+
     // Zabbix user (requires Super Admin access rights to access image generator script)
     $z_user = $config['zabbix_user'];
     $z_pass = $config['zabbix_user_pwd'];
@@ -753,29 +805,38 @@
     // --- LOGIN ---
     // -------------
 
-    _log('# LOGIN to Zabbix');
+    // We only use the USER.LOGIN method if not using the API bearer token method
+    if ($z_api_token=='') {
+        _log('# LOGIN to Zabbix');
 
-    $request = array('jsonrpc'=>'2.0',
-                     'method'=>'user.login',
-                     'params'=>array('username'=>$z_api_user,
-                                     'password'=>$z_api_pass),
-                     'id'=>nextRequestID(),
-                     'auth'=>null);
+        $request = array('jsonrpc'=>'2.0',
+                         'method'=>'user.login',
+                         'params'=>array('username'=>$z_api_user,
+                                         'password'=>$z_api_pass),
+                         'id'=>nextRequestID(),
+                         'auth'=>null);
 
-    $result = postJSON($z_url_api,$request);
+        $result = postJSON($z_url_api,$request);
 
-    $token = '';
-    if (isset($result['result'])) { $token = $result['result']; }
+        $token = '';
+        if (isset($result['result'])) { $token = $result['result']; }
 
-    if ($token=='')
-    {
-        echo 'Error logging in to Zabbix? ('.$z_url_api.'): '.$cCRLF;
-        echo var_dump($request).$cCRLF;
-        echo var_dump($result).$cCRLF;
-        die;
+        if ($token=='')
+        {
+            echo 'Error logging in to Zabbix? ('.$z_url_api.'): '.$cCRLF;
+            echo var_dump($request).$cCRLF;
+            echo var_dump($result).$cCRLF;
+            die;
+        }
+
+        _log('> Token = '.$token);
+    } else {
+        if ($cDebug) {
+            _log('# Using API bearer token authentication to access Zabbix');
+        }
+
+        $token = '';
     }
-
-    _log('> Token = '.$token);
 
     // -----------------------
     // --- LOG API VERSION ---
@@ -810,6 +871,10 @@
                                          'limit'=>1),
                          'auth'=>$token,
                          'id'=>nextRequestID());
+
+        if ($z_api_token=='') {
+            $request['auth'] = $token;
+        }
 
         $thisProblems = postJSON($z_url_api, $request);
         _log('> Problem data (recent)'.$cCRLF.json_encode($thisProblems,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
@@ -846,15 +911,27 @@
 
     _log('# Retreiving EVENT information');
 
-    $request = array('jsonrpc'=>'2.0',
-                     'method'=>'event.get',
-                     'params'=>array('eventids'=>$p_eventId,
-                                     'output'=>'extend',
-                                     'selectRelatedObject'=>'extend',
-                                     'selectSuppressionData'=>'extend',
-                                     'select_acknowledges'=>'extend'),
-                     'auth'=>$token,
-                     'id'=>nextRequestID());
+    if ($apiVersionMajor<"7") {
+        $request = array('jsonrpc'=>'2.0',
+                         'method'=>'event.get',
+                         'params'=>array('eventids'=>$p_eventId,
+                                         'output'=>'extend',
+                                         'selectRelatedObject'=>'extend',
+                                         'selectSuppressionData'=>'extend',
+                                         'select_acknowledges'=>'extend'),
+                         'auth'=>$token,
+                         'id'=>nextRequestID());
+    } else {
+        $request = array('jsonrpc'=>'2.0',
+                         'method'=>'event.get',
+                         'params'=>array('eventids'=>$p_eventId,
+                                         'output'=>'extend',
+                                         'selectRelatedObject'=>'extend',
+                                         'selectSuppressionData'=>'extend',
+                                         'selectAcknowledges'=>'extend'),
+                         'auth'=>$token,
+                         'id'=>nextRequestID());
+    }
 
     $thisEvent = postJSON($z_url_api,$request);
     _log('> Event data'.$cCRLF.json_encode($thisEvent,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
@@ -882,7 +959,7 @@
     }
 
     // --- Collect and attach acknowledge messages for this event
-    if (sizeof($thisEvent['result'][0]['acknowledges']>0)) {
+    if (count($thisEvent['result'][0]['acknowledges'])>0) {
         foreach($thisEvent['result'][0]['acknowledges'] as $aCount=>$anAck) {
             $mailData['ACKNOWLEDGES'][$aCount] = $anAck;
             $mailData['ACKNOWLEDGES'][$aCount]['_clock'] = zabbixTStoString($anAck['clock']);

@@ -60,7 +60,7 @@
                     <value>https://myzabbix.com/mailGraph.php</value>
                 </parameter>
             </parameters>
-            <script>// mailGraph v2.18
+            <script>// mailGraph v2.20
 
 // Function to test string
 function isJSON(str) {
