@@ -24,6 +24,10 @@ Please refer to the Wiki how to get mailGraph installed and configured on your s
 [Extensive GERMAN installation from scratch](https://znil.net/index.php?title=Zabbix_mailGraph_installieren_-_Trigger_Alerts_Emails_mit_Grafiken) - nice work from Bernard Linz
 
 ## Announcements ##
+_(2025/02/04)_
+
+Started on coding and testing mailGraph v3.
+
 _(2025/01/26)_
 
 mailGraph v2.20 now supporting Zabbix 7.0 (LTS) and Zabbix 7.2 (in particular the new API bearer token authentication method).
@@ -42,6 +46,8 @@ Principal bug fixing on mailGraph v2.x (logic failure or similar) will continue 
 ## Ideas and improvements ##
 
 I'm open to new feature requests - please raise an issue for this in this Github space.
+
+[#50 - Docker support](https://github.com/moudsen/mailGraph/issues/50) - Docker support inserted shortly after testing; will be pushed into release 3 shortly.
 
 ## Special thank you ##
 I would like to express my gratitude to the following people that have actively contributed to bring bugs and improvements to my attention:
