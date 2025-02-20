@@ -45,6 +45,7 @@
     // Release 3 placeholder for Zabbix 7.0 LTS and 7.2+
     // ------------------------------------------------------------------------------------------------------
     // 2.20                            Tested in Zabbix 7.0.7 LTS and Zabbix 7.2.2
+    // 2.21 2025/02/20 - Mark Oudsen - Added #57 enhancement for manipulation of data value truncing
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -109,7 +110,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.20';
+    $cVersion = 'v2.21';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -721,6 +722,9 @@
     $p_graph_match = 'any';
     if ((isset($config['graph_match'])) && ($config['graph_match']=='exact')) { $p_graph_match = 'exact'; }
 
+    $p_item_value_truncate = 0;
+    if (isset($config['item_value_truncate'])) { $p_item_value_truncate = intval($config['item_value_truncate']); }
+
     // --- GLOBAL CONFIGURATION ---
 
     // Script related settings
@@ -1076,6 +1080,10 @@
                     _log('+ Trigger screen header = '.$triggerScreenPeriodHeader);
                 }
                 break;
+            case 'mailGraph.valueTruncate':
+                $p_item_value_truncate = intval($aTag['value']);
+                _log('+ Data value truncing = '.$p_item_value_truncate);
+                break;
         }
     }
 
@@ -1120,9 +1128,11 @@
     if (substr($mailData['ITEM_LASTVALUE'],0,5)=='<?xml') { $mailData['ITEM_LASTVALUE'] = '[record]'; }
     if (substr($mailData['ITEM_PREVIOUSVALUE'],0,5)=='<?xml') { $mailData['ITEM_PREVIOUSTVALUE'] = '[record]'; }
 
-    // Catch long elements
-    if (strlen($mailData['ITEM_LASTVALUE'])>50) { $mailData['ITEM_LASTVALUE'] = substr($mailData['ITEM_LASTVALUE'],0,50).' ...'; }
-    if (strlen($mailData['ITEM_PREVIOUSVALUE'])>50) { $mailData['ITEM_PREVIOUSVALUE'] = substr($mailData['ITEM_PREVIOUSVALUE'],0,50).' ...'; }
+    // Handling long data elements
+    if ($p_item_value_truncate>0) {
+        if (strlen($mailData['ITEM_LASTVALUE'])>$p_item_value_truncate) { $mailData['ITEM_LASTVALUE'] = substr($mailData['ITEM_LASTVALUE'],0,$p_item_value_truncate).' ...'; }
+        if (strlen($mailData['ITEM_PREVIOUSVALUE'])>$p_item_value_truncate) { $mailData['ITEM_PREVIOUSVALUE'] = substr($mailData['ITEM_PREVIOUSVALUE'],0,$p_item_value_truncate).' ...'; }
+    }
 
     // ---------------------
     // --- GET HOST INFO ---
@@ -1352,26 +1362,30 @@
 
         $result = array();
 
-        foreach($screenGraphs['result'][0]['screenitems'] as $anItem)
-        {
-            switch($anItem['resourcetype'])
+        if (isset($screenGrahps['result'][0]['screenitems'])) {
+            foreach($screenGraphs['result'][0]['screenitems'] as $anItem)
             {
-                case 0: // Graph
-                    $request = array('jsonrpc'=>'2.0',
-                                     'method'=>'graph.get',
-                                     'params'=>array('graphids'=>$anItem['resourceid'],
-                                                     'expandName'=>1,
-                                                     'output'=>'extend'),
-                                     'auth'=>$token,
-                                     'id'=>nextRequestID());
+                switch($anItem['resourcetype'])
+                {
+                    case 0: // Graph
+                        $request = array('jsonrpc'=>'2.0',
+                                         'method'=>'graph.get',
+                                         'params'=>array('graphids'=>$anItem['resourceid'],
+                                                         'expandName'=>1,
+                                                         'output'=>'extend'),
+                                         'auth'=>$token,
+                                         'id'=>nextRequestID());
 
-                    $screenGraph = postJSON($z_url_api,$request);
-                    _log('+ Graph data for screen item #'.$anItem['screenitemid'].$cCRLF.
-                         json_encode($screenGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+                        $screenGraph = postJSON($z_url_api,$request);
+                        _log('+ Graph data for screen item #'.$anItem['screenitemid'].$cCRLF.
+                             json_encode($screenGraph,JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
-                    $result[] = array('screen'=>$anItem,'name'=>$screenGraphs['result'][0]['name'],'graph'=>$screenGraph['result'][0]);
-                    break;
+                        $result[] = array('screen'=>$anItem,'name'=>$screenGraphs['result'][0]['name'],'graph'=>$screenGraph['result'][0]);
+                        break;
+                }
             }
+        } else {
+            _log('> No screen items associated to this screen?');
         }
 
         // --- Sort the result according to SCREEN x,y position
@@ -1597,6 +1611,12 @@
 
     $mailData['EVENT_DURATION'] = $p_duration;
     $mailData['HOST_PROBLEMS_URL'] = $z_server.'zabbix.php?show=1&name=&inventory%5B0%5D%5Bfield%5D=type&inventory%5B0%5D%5Bvalue%5D=&evaltype=0&tags%5B0%5D%5Btag%5D=&tags%5B0%5D%5Boperator%5D=0&tags%5B0%5D%5Bvalue%5D=&show_tags=3&tag_name_format=0&tag_priority=&show_opdata=0&show_timeline=1&filter_name=&filter_show_counter=0&filter_custom_time=0&sort=clock&sortorder=DESC&age_state=0&show_suppressed=0&unacknowledged=0&compact_view=0&details=0&highlight_row=0&action=problem.view&hostids%5B%5D='.$mailData['HOST_ID'];
+
+    // Handling long data elements
+    if ($p_item_value_truncate>0) {
+        if (strlen($mailData['ITEM_LASTVALUE'])>$p_item_value_truncate) { $mailData['ITEM_LASTVALUE'] = substr($mailData['ITEM_LASTVALUE'],0,$p_item_value_truncate).' ...'; }
+        if (strlen($mailData['ITEM_PREVIOUSVALUE'])>$p_item_value_truncate) { $mailData['ITEM_PREVIOUSVALUE'] = substr($mailData['ITEM_PREVIOUSVALUE'],0,$p_item_value_truncate).' ...'; }
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Compose & Send Message ///////////////////////////////////////////////////////////////////////////////
