@@ -101,7 +101,7 @@
                                 ({{ HOST_ERROR }})
 {% endif %}
                                 <br/>
-{% if EVENT_OPDATE|length > 0 %}
+{% if EVENT_OPDATA|length > 0 %}
                                 Operational data: <b>{{ EVENT_OPDATA }}</b><br/>
 {% endif %}
                                 Status: <b>{{ EVENT_STATUS }}</b><br/>
