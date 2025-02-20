@@ -23,6 +23,7 @@
     "smtp_reply_address": "feedback@mydomain.com",
     "smtp_reply_name": "mailGraph response mailbox",
     "graph_match": "any",
+    "item_value_truncate": 50,
     "periods": "10m,4h,2d,7d",
     "periods_headers": "Last 10 minutes,Last 4 hours,Last 2 days,Last 7 days",
     "debug": 0
