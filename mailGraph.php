@@ -46,6 +46,7 @@
     // ------------------------------------------------------------------------------------------------------
     // 2.20                            Tested in Zabbix 7.0.7 LTS and Zabbix 7.2.2
     // 2.21 2025/02/20 - Mark Oudsen - Added #57 enhancement for manipulation of data value truncing
+    // 2.22 2025/03/19 - Mark Oudsen - Fixed #60 incorrect JSON request (boolean as text instead of bool)
     // ------------------------------------------------------------------------------------------------------
     //
     // (C) M.J.Oudsen, mark.oudsen@puzzl.nl
@@ -110,7 +111,7 @@
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // CONSTANTS
-    $cVersion = 'v2.21';
+    $cVersion = 'v2.22';
     $cCRLF = chr(10).chr(13);
     $maskDateTime = 'Y-m-d H:i:s';
     $maxGraphs = 8;
@@ -418,52 +419,27 @@
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Check the array for information we do not want to share in any logging
+    // Check the array if it contains information that should not be logged
 
-    function maskOutputFields($info)
+    function maskKey(&$theValue, $theKey)
     {
-        foreach($info as $aKey=>$aValue)
+        switch($theKey)
         {
-            switch($aKey)
-            {
-                case 'zabbix_user':
-                case 'zabbix_user_pwd':
-                case 'zabbix_api_user':
-                case 'zabbix_api_pwd':
-                case 'zabbix_api_token':
-                    $info[$aKey] = '<masked>';
-                    break;
+            case 'zabbix_user':
+            case 'zabbix_user_pwd':
+            case 'zabbix_api_user':
+            case 'zabbix_api_pwd':
+            case 'zabbix_api_token':
+            case 'username':
+            case 'password':
+                $theValue = '<masked>';
+                break;
             }
         }
-
-        return($info);
-    }
-
-    // Check the array if it contains information that should not be logged
 
     function maskOutputContent($info)
     {
-        global $config;
-
-        foreach($info as $infoKey=>$infoValue)
-        {
-            if (is_array($infoValue)) { $info[$infoKey] = maskOutputContent($infoValue); }
-
-            foreach($config as $aKey=>$aValue)
-            {
-                switch($aKey)
-                {
-                    case 'zabbix_user':
-                    case 'zabbix_user_pwd':
-                    case 'zabbix_api_user':
-                    case 'zabbix_api_pwd':
-                    case 'zabbix_api_token':
-                        if ($aValue==$infoValue) { $info[$infoKey] = '<masked>'; };
-                        break;
-                }
-            }
-        }
-
+        array_walk_recursive($info,'maskKey');
         return($info);
     }
 
@@ -555,7 +531,7 @@
     $config = readConfig(getcwd().'/config/config.json');
 
     _log('# Configuration taken from config.json'.$cCRLF.
-         json_encode(maskOutputFields($config),JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
+         json_encode(maskOutputContent($config),JSON_PRETTY_PRINT|JSON_NUMERIC_CHECK));
 
     // --- MAIL DATA ---
 
@@ -871,7 +847,7 @@
         $request = array('jsonrpc'=>'2.0',
                          'method'=>'problem.get',
                          'params'=>array('output'=>'extend',
-                                         'recent'=>'true',
+                                         'recent'=>TRUE,
                                          'limit'=>1),
                          'auth'=>$token,
                          'id'=>nextRequestID());
@@ -890,7 +866,7 @@
             $request = array('jsonrpc'=>'2.0',
                              'method'=>'problem.get',
                              'params'=>array('output'=>'extend',
-                                             'recent'=>'false',
+                                             'recent'=>FALSE,
                                              'limit'=>1),
                              'auth'=>$token,
                              'id'=>nextRequestID());
