@@ -48,6 +48,7 @@ Principal bug fixing on mailGraph v2.x (logic failure or similar) will continue 
 I'm open to new feature requests - please raise an issue for this in this Github space.
 
 [#50 - Docker support](https://github.com/moudsen/mailGraph/issues/50) - Docker support inserted shortly after testing; will be pushed into release 3 shortly.
+_Please refer to the `docker` directory for the first release of the docker image on Docker Hub (hoppa66/zabbix-mailgraph)_
 
 ## Special thank you ##
 I would like to express my gratitude to the following people that have actively contributed to bring bugs and improvements to my attention:
