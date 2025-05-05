@@ -1,0 +1,13 @@
+version: '2.1'
+
+services:
+  webhook:
+    image: hoppa66/zabbix-mailgraph:latest
+    restart: ${RESTART_POLICY}
+    hostname: mailgraph
+    ports:
+      - "9080:80"
+    volumes:
+      - /opt/Zabbix-mailGraph/apache.log:/var/log/apache2:rw
+      - /opt/Zabbix-mailGraph/config:/var/www/site/public/config:ro
+      - /opt/Zabbix-mailGraph/templates:/var/www/site/public/templates:ro
